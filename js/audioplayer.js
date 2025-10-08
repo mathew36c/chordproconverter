@@ -54,6 +54,7 @@ async function ensureSampler() {
   return samplerPromise;
 }
 
+// Initialize Tone.js on user interaction
 ["pointerdown", "touchstart", "keydown"].forEach((eventType) => {
   window.addEventListener(
     eventType,
@@ -94,57 +95,125 @@ function chordToNotes(symbol) {
   // Get the notes from the chord
   const notes = chord.notes;
 
-  // Voice the notes: root at octave 3, others at octave 4
+  // Voice the notes with appropriate octaves for guitar
   const voicedNotes = notes.map((note, index) => {
     const pc = Tonal.Note.pitchClass(note);
-    const enh = Tonal.Note.enharmonic(pc);
-    const octave = index === 0 ? 3 : 4;
+    
+    // Convert flats to sharps to match sample file naming
+    let enh = pc;
+    if (pc.includes('b')) {
+      const natural = pc[0];
+      const prevNote = String.fromCharCode(natural.charCodeAt(0) - 1);
+      if (prevNote >= 'A') {
+        enh = prevNote + '#';
+      } else {
+        enh = 'G#'; // Handle Cb -> B
+      }
+    }
+    
+    // Determine octave based on position and note
+    let octave;
+    if (index === 0) {
+      // Root note - use lower octave
+      octave = 3;
+    } else {
+      // Other notes - check if they would be in guitar range
+      octave = 4;
+      // Adjust if note would be too high
+      if (['A', 'A#', 'B'].includes(enh) && octave === 4) {
+        octave = 3;
+      }
+    }
+    
     return `${enh}${octave}`;
   });
 
-  // Ensure we have at least 4 notes: if fewer than 4, add the root at octave 4 as an octave reinforcement/double
-  if (voicedNotes.length < 4) {
+  // Ensure we have at least 3-4 notes for a fuller sound
+  while (voicedNotes.length < 3) {
     const rootPc = Tonal.Note.pitchClass(notes[0]);
-    const rootEnh = Tonal.Note.enharmonic(rootPc);
+    let rootEnh = rootPc;
+    if (rootPc.includes('b')) {
+      const natural = rootPc[0];
+      const prevNote = String.fromCharCode(natural.charCodeAt(0) - 1);
+      if (prevNote >= 'A') {
+        rootEnh = prevNote + '#';
+      } else {
+        rootEnh = 'G#';
+      }
+    }
     voicedNotes.push(`${rootEnh}4`);
   }
 
-  // Log the parsed chord and notes
-  console.log(`Parsed chord "${symbol}": original notes ${notes.join(", ")} -> voiced notes ${voicedNotes.join(", ")}`);
-
-  // Handle bass if present
-  const bass = slashBass
-    ? `${Tonal.Note.enharmonic(Tonal.Note.pitchClass(slashBass))}2` // Bass at octave 2 for lower sound
-    : chord.bass
-    ? `${Tonal.Note.enharmonic(Tonal.Note.pitchClass(chord.bass))}2`
-    : undefined;
-
-  if (bass) {
-    console.log(`Chord "${symbol}": bass note ${bass}`);
+  // Filter out notes that aren't in our sample set
+  const availableNotes = voicedNotes.filter(note => SAMPLE_NOTES.includes(note));
+  
+  if (availableNotes.length === 0) {
+    console.warn(`No available samples for chord: ${symbol}`);
+    return null;
   }
 
-  return { notes: voicedNotes, bass };
+  console.log(`Parsed chord "${symbol}": ${notes.join(", ")} -> ${availableNotes.join(", ")}`);
+
+  // Handle bass note if present
+  let bass = null;
+  if (slashBass) {
+    const bassPc = Tonal.Note.pitchClass(slashBass);
+    let bassEnh = bassPc;
+    if (bassPc.includes('b')) {
+      const natural = bassPc[0];
+      const prevNote = String.fromCharCode(natural.charCodeAt(0) - 1);
+      if (prevNote >= 'A') {
+        bassEnh = prevNote + '#';
+      } else {
+        bassEnh = 'G#';
+      }
+    }
+    bass = `${bassEnh}2`;
+    
+    // Check if bass note is in our sample range
+    if (!SAMPLE_NOTES.includes(bass)) {
+      // Try octave 3 if octave 2 isn't available
+      bass = `${bassEnh}3`;
+      if (!SAMPLE_NOTES.includes(bass)) {
+        bass = null;
+      }
+    }
+  }
+
+  if (bass) {
+    console.log(`Bass note for "${symbol}": ${bass}`);
+  }
+
+  return { notes: availableNotes, bass };
 }
 
 async function playChord(symbol) {
-  const activeSampler = await ensureSampler().catch(() => null);
-  if (!activeSampler) return;
+  try {
+    const activeSampler = await ensureSampler();
+    if (!activeSampler) {
+      console.error("Sampler not available");
+      return;
+    }
 
-  const parsed = chordToNotes(symbol);
-  if (!parsed) return;
+    const parsed = chordToNotes(symbol);
+    if (!parsed) return;
 
-  // Log what we're about to play
-  console.log(`Playing chord "${symbol}": notes [${parsed.notes.join(", ")}]${parsed.bass ? `, bass [${parsed.bass}]` : ""}`);
+    console.log(`Playing chord "${symbol}": notes [${parsed.notes.join(", ")}]${parsed.bass ? `, bass [${parsed.bass}]` : ""}`);
 
-  const now = Tone.now();
-  const strumGap = 0.03;
+    const now = Tone.now();
+    const strumGap = 0.03;
 
-  parsed.notes.forEach((note, index) => {
-    activeSampler.triggerAttackRelease(note, "2n", now + index * strumGap, 0.75);
-  });
+    // Play bass note first if present
+    if (parsed.bass) {
+      activeSampler.triggerAttackRelease(parsed.bass, "2n", now - 0.02, 0.9);
+    }
 
-  if (parsed.bass) {
-    activeSampler.triggerAttackRelease(parsed.bass, "2n", now - 0.02, 0.9);
+    // Strum through the chord notes
+    parsed.notes.forEach((note, index) => {
+      activeSampler.triggerAttackRelease(note, "2n", now + index * strumGap, 0.75);
+    });
+  } catch (error) {
+    console.error("Error playing chord:", error);
   }
 }
 
@@ -152,11 +221,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const outputEl = document.getElementById("outputDisplay");
   if (!outputEl) return;
 
-  outputEl.addEventListener("click", (event) => {
+  outputEl.addEventListener("click", async (event) => {
     const chordEl = event.target.closest(".chord");
     if (!chordEl) return;
 
     const chordSymbol = chordEl.dataset.chord || chordEl.textContent.trim();
-    playChord(chordSymbol);
+    await playChord(chordSymbol);
   });
 });
