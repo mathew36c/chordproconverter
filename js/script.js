@@ -457,10 +457,6 @@ async function handleCopy() {
   }
 }
 
-function isModifierPressed(event) {
-  return event.ctrlKey || event.metaKey;
-}
-
 inputField.addEventListener("input", () => {
   transposeSteps = 0;
   updateTransposeUI();
@@ -498,19 +494,6 @@ flatsToggle.addEventListener("click", () => {
   useFlats = !useFlats;
   updateFlatsUI();
   updateTransposedOutput();
-});
-
-document.addEventListener("keydown", (event) => {
-  if (!isModifierPressed(event)) return;
-
-  const key = event.key.toLowerCase();
-  if (key === "v") {
-    event.preventDefault();
-    handlePaste();
-  } else if (key === "c") {
-    event.preventDefault();
-    handleCopy();
-  }
 });
 
 updateTransposeUI();

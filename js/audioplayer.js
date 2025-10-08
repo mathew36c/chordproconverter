@@ -12,7 +12,7 @@ const SAMPLE_FILES = [
   "G2", "G3", "G4", "Gs2", "Gs3", "Gs4"
 ];
 
-// Create URL map - map from note format (C#4) to file format (Cs4)
+// Create URL map
 const samplerUrls = {};
 SAMPLE_FILES.forEach(filename => {
   const noteFormat = filename.replace(/s(\d)/, '#$1');
@@ -22,93 +22,112 @@ SAMPLE_FILES.forEach(filename => {
 console.log("Available samples:", Object.keys(samplerUrls).sort());
 
 let sampler = null;
-let samplerPromise = null;
-let loadingStartTime = null;
+let samplerLoadPromise = null;
+let isLoading = false;
 
 // Loading indicator functions
 function showLoadingIndicator() {
   const indicator = document.getElementById('audioLoadingIndicator');
   if (indicator) {
     indicator.classList.remove('hidden');
-    loadingStartTime = Date.now();
   }
 }
 
 function hideLoadingIndicator() {
   const indicator = document.getElementById('audioLoadingIndicator');
   if (indicator) {
-    // Ensure minimum display time of 500ms for better UX
-    const elapsed = Date.now() - loadingStartTime;
-    const delay = Math.max(0, 500 - elapsed);
-    
+    // Small delay for smooth transition
     setTimeout(() => {
       indicator.classList.add('hidden');
-    }, delay);
+    }, 300);
   }
 }
 
-async function ensureSampler() {
-  if (sampler) return sampler;
-
-  if (!samplerPromise) {
-    showLoadingIndicator();
+// Start loading samples immediately on page load
+async function initializeSampler() {
+  if (sampler || isLoading) return sampler;
+  
+  isLoading = true;
+  showLoadingIndicator();
+  
+  try {
+    console.log("Starting to load guitar samples...");
     
-    samplerPromise = (async () => {
-      await Tone.start();
-      const ctx = Tone.getContext();
-      if (ctx.state === "suspended") {
-        await ctx.resume();
-      }
-
-      return await new Promise((resolve, reject) => {
-        console.log("Starting to load guitar samples...");
-        
-        const createdSampler = new Tone.Sampler({
-          urls: samplerUrls,
-          baseUrl: SAMPLE_BASE_URL,
-          release: 2,
-          attack: 0.005,
-          onload: () => {
-            sampler = createdSampler;
-            sampler.context.lookAhead = 0.05;
-            console.log("✓ Acoustic guitar samples loaded successfully");
-            hideLoadingIndicator();
-            resolve(createdSampler);
-          },
-          onerror: (error) => {
-            console.error("✗ Sampler load error:", error);
-            hideLoadingIndicator();
-            reject(error);
-          }
-        }).toDestination();
-      });
-    })().catch((error) => {
-      samplerPromise = null;
-      hideLoadingIndicator();
-      console.error("Failed to initialize sampler:", error);
-      throw error;
+    // Initialize Tone.js context
+    if (typeof Tone === 'undefined') {
+      throw new Error("Tone.js is not loaded");
+    }
+    
+    // Create the sampler
+    const createdSampler = await new Promise((resolve, reject) => {
+      const newSampler = new Tone.Sampler({
+        urls: samplerUrls,
+        baseUrl: SAMPLE_BASE_URL,
+        release: 2,
+        attack: 0.005,
+        onload: () => {
+          console.log("✓ Acoustic guitar samples loaded successfully");
+          resolve(newSampler);
+        },
+        onerror: (error) => {
+          console.error("✗ Sampler load error:", error);
+          reject(error);
+        }
+      }).toDestination();
     });
+    
+    sampler = createdSampler;
+    sampler.context.lookAhead = 0.05;
+    isLoading = false;
+    hideLoadingIndicator();
+    
+    return sampler;
+  } catch (error) {
+    isLoading = false;
+    hideLoadingIndicator();
+    console.error("Failed to initialize sampler:", error);
+    throw error;
   }
-
-  return samplerPromise;
 }
 
-// Initialize Tone.js on user interaction
-["pointerdown", "touchstart", "keydown"].forEach((eventType) => {
-  window.addEventListener(
-    eventType,
-    () => {
-      if (typeof Tone !== 'undefined') {
-        Tone.start().catch((error) => {
-          console.warn("Tone.start() failed:", error);
-        });
-      }
-    },
-    { once: true, passive: true }
-  );
-});
+// Ensure sampler is ready (for when user clicks)
+async function ensureSampler() {
+  if (sampler) {
+    // Start audio context if needed
+    if (Tone.context.state !== "running") {
+      await Tone.start();
+    }
+    return sampler;
+  }
+  
+  if (samplerLoadPromise) {
+    return samplerLoadPromise;
+  }
+  
+  // This shouldn't happen if initialization worked, but just in case
+  samplerLoadPromise = initializeSampler();
+  return samplerLoadPromise;
+}
 
-// Simple chord parsing without Tonal.js dependency
+// Initialize Tone.js context on user interaction (required for audio playback)
+let audioContextStarted = false;
+async function startAudioContext() {
+  if (audioContextStarted) return;
+  
+  try {
+    await Tone.start();
+    const ctx = Tone.getContext();
+    if (ctx.state === "suspended") {
+      await ctx.resume();
+    }
+    audioContextStarted = true;
+    console.log("Audio context started");
+  } catch (error) {
+    console.warn("Failed to start audio context:", error);
+  }
+}
+
+// Simple chord parsing
 function parseChordSymbol(symbol) {
   // Handle slash chords
   const [mainChord, bassNote] = symbol.split('/');
@@ -157,7 +176,7 @@ function parseChordSymbol(symbol) {
   const [, root, suffix] = match;
   const isMinor = suffix.includes('m') && !suffix.includes('maj');
   
-  // Normalize root (convert flats to sharps)
+  // Normalize root
   let normalizedRoot = root;
   if (root.includes('b')) {
     const flatToSharp = {
@@ -167,7 +186,7 @@ function parseChordSymbol(symbol) {
     normalizedRoot = flatToSharp[root] || root;
   }
 
-  // Get basic triad
+  // Get chord notes
   let notes = isMinor ? minorMap[normalizedRoot] : noteMap[normalizedRoot];
   if (!notes) {
     notes = noteMap[normalizedRoot] || ['C', 'E', 'G'];
@@ -186,10 +205,9 @@ function parseChordSymbol(symbol) {
     }
   }
 
-  // Parse bass note if present
+  // Parse bass note
   let bass = null;
   if (bassNote) {
-    // Normalize bass note
     let normalizedBass = bassNote;
     if (bassNote.includes('b')) {
       const flatToSharp = {
@@ -204,18 +222,16 @@ function parseChordSymbol(symbol) {
   return { notes, bass };
 }
 
-// Check if a note is available in our samples
+// Check if a note is available
 function isNoteAvailable(note) {
   return samplerUrls.hasOwnProperty(note);
 }
 
-// Find the closest available octave for a note
+// Find the closest available octave
 function findAvailableOctave(pitchClass, preferredOctave) {
-  // Try the preferred octave first
   let note = `${pitchClass}${preferredOctave}`;
   if (isNoteAvailable(note)) return note;
   
-  // Try adjacent octaves
   for (let offset of [1, -1, 2, -2]) {
     const octave = preferredOctave + offset;
     if (octave >= 2 && octave <= 5) {
@@ -239,7 +255,6 @@ function chordToNotes(symbol) {
 
       notes.forEach((note, index) => {
         const pc = Tonal.Note.pitchClass(note);
-        // Convert flats to sharps for our samples
         let normalizedPc = pc;
         if (pc.includes('b')) {
           const flatToSharp = {
@@ -269,7 +284,6 @@ function chordToNotes(symbol) {
           normalizedBass = flatToSharp[bassPc] || bassPc;
         }
         
-        // Try to find bass note in lower octaves
         bass = findAvailableOctave(normalizedBass, 2) || 
                findAvailableOctave(normalizedBass, 3);
       }
@@ -315,12 +329,9 @@ function chordToNotes(symbol) {
 
 async function playChord(symbol) {
   try {
-    // Check if Tone.js is loaded
-    if (typeof Tone === 'undefined') {
-      console.error("Tone.js is not loaded");
-      return;
-    }
-
+    // Start audio context on first interaction
+    await startAudioContext();
+    
     const activeSampler = await ensureSampler();
     if (!activeSampler) {
       console.error("Sampler not available");
@@ -338,14 +349,14 @@ async function playChord(symbol) {
     const now = Tone.now();
     const strumGap = 0.025;
 
-    // Play bass note first if present (louder and slightly earlier)
+    // Play bass note first if present
     if (parsed.bass) {
       activeSampler.triggerAttackRelease(parsed.bass, "2n", now - 0.02, 0.85);
     }
 
     // Strum through the chord notes
     parsed.notes.forEach((note, index) => {
-      const velocity = parsed.bass ? 0.6 : 0.7; // Slightly quieter if bass is present
+      const velocity = parsed.bass ? 0.6 : 0.7;
       activeSampler.triggerAttackRelease(note, "2n", now + index * strumGap, velocity);
     });
   } catch (error) {
@@ -353,29 +364,28 @@ async function playChord(symbol) {
   }
 }
 
-// Preload samples on page load (optional - for better first-click experience)
+// Start loading samples immediately when page loads
 document.addEventListener("DOMContentLoaded", () => {
   // Check if libraries are loaded
   if (typeof Tone === 'undefined') {
     console.error("Tone.js library not loaded");
+    hideLoadingIndicator();
+    return;
   }
   if (typeof Tonal === 'undefined') {
     console.warn("Tonal.js library not loaded - using fallback chord parser");
   }
+
+  // Start loading samples immediately
+  initializeSampler().catch(err => {
+    console.error("Failed to load samples:", err);
+  });
 
   const outputEl = document.getElementById("outputDisplay");
   if (!outputEl) {
     console.warn("Output display element not found");
     return;
   }
-
-  // Preload samples after a short delay
-  setTimeout(() => {
-    console.log("Preloading guitar samples...");
-    ensureSampler().catch(err => {
-      console.error("Failed to preload samples:", err);
-    });
-  }, 1000);
 
   outputEl.addEventListener("click", async (event) => {
     const chordEl = event.target.closest(".chord");
