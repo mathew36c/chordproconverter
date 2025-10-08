@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ultimate Guitar to ChordPro Converter</title>
+  <link rel="icon" type="image/x-icon" href="favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="site-logo">
+    <img src="images/logo.svg" alt="Ultimate Guitar to ChordPro Converter" width="175" height="40">
+  </div>
+
+  <header class="hero">
+    <div class="hero-content">
+      <h1 class="hero-title">Ultimate Guitar to ChordPro Converter</h1>
+      <p class="hero-subtitle">
+        Paste any Ultimate Guitar chord sheet, convert it into clean ChordPro charts, and tweak keys instantly with smart transposition.
+      </p>
+      <a class="hero-cta" href="#converter">Jump to the converter ↓</a>
+    </div>
+  </header>
+
+  <main>
+    <section id="converter" class="converter-section">
+      <div class="converter-wrapper">
+        <div class="converter-grid">
+          <div class="pane">
+            <label for="inputField">Input</label>
+            <textarea id="inputField" placeholder="Paste Ultimate Guitar format here...">[Verse 1]
+ 
+  D          G             A7       D
+Great is Thy faithfulness, O God my Father,
+G           D         E7           A
+There is no shadow of turning with Thee;
+A7            D           Bm             Em
+Thou changest not, Thy compassions they fail not
+G           D             A A7      D
+As Thou has been, Thou forever wilt be.
+ 
+ 
+[Chorus]
+ 
+A            D
+Great is Thy faithfulness!
+Bm           Em
+Great is Thy faithfulness!
+A7         D           E7        A
+Morning by morning new mercies I see.
+A7         D          Bm            Em
+All I have needed Thy hand hath provided
+G            D             A     A7   D
+Great is Thy faithfulness, Lord, unto me.
+ 
+ 
+[Verse 2]
+ 
+D          G           A7             D
+Summer and winter, and springtime and harvest,
+G              D              E7       A
+Sun, moon, and stars in their courses above
+A7            D         Bm        Em
+Join with all nature in manifold witness
+G            D             A  A7     D
+To Thy great faithfulness, mercy and love.
+ 
+ 
+[Chorus]
+ 
+A            D
+Great is Thy faithfulness!
+Bm           Em
+Great is Thy faithfulness!
+A7         D           E7        A
+Morning by morning new mercies I see.
+A7         D          Bm            Em
+All I have needed Thy hand hath provided
+G            D             A     A7   D
+Great is Thy faithfulness, Lord, unto me.</textarea>
+
+            <div class="buttons">
+              <button id="pasteButton" type="button">Paste</button>
+              <button id="clearButton" type="button" class="secondary">Clear</button>
+            </div>
+          </div>
+
+          <div class="pane">
+            <label for="outputDisplay">Output</label>
+            <div class="output-wrapper">
+              <div id="outputDisplay" aria-live="polite"></div>
+              <textarea id="plainOutput" class="visually-hidden" aria-hidden="true"></textarea>
+            </div>
+
+            <div class="buttons">
+              <button id="copyButton" type="button" disabled>Copy</button>
+
+              <div id="transposeControls" class="transpose-controls" role="group" aria-label="Transpose">
+                <span class="transpose-label">Transpose</span>
+                <button id="transposeDown" type="button" class="transpose-step" aria-label="Transpose down">−</button>
+                <span id="transposeValue" class="transpose-value">0</span>
+                <button id="transposeUp" type="button" class="transpose-step" aria-label="Transpose up">+</button>
+              </div>
+
+              <button id="flatsToggle" type="button" class="secondary" aria-pressed="false">Use flats</button>
+
+              <span id="copyStatus" class="status" aria-live="polite"></span>
+            </div>
+          </div>
+        </div>
+
+        <p class="converter-instructions">
+          Paste with <strong>Ctrl/Cmd + V</strong>, convert automatically, adjust the key, and copy the result with <strong>Ctrl/Cmd + C</strong>.
+        </p>
+      </div>
+    </section>
+
+    <section class="features-section">
+      <div class="section-header">
+        <h2 class="section-title">Why musicians love this tool</h2>
+        <p class="section-subtitle">
+          Clean charts without the grunt work — built for worship teams, gigging pros, and practice sessions alike.
+        </p>
+      </div>
+
+<div class="features-grid">
+  <div class="feature-card">
+    <span class="feature-icon">
+      <img src="images/flash.svg" alt="Fast conversion">
+    </span>
+    <h3 class="feature-title">Fast conversion</h3>
+    <p class="feature-text">
+      Turn Ultimate Guitar sheets into proper ChordPro syntax with tidy spacing, single blank lines, and section comments.
+    </p>
+  </div>
+
+  <div class="feature-card">
+    <span class="feature-icon">
+      <img src="images/dart.svg" alt="Accurate transposition">
+    </span>
+    <h3 class="feature-title">Accurate transposition</h3>
+    <p class="feature-text">
+      Shift keys up or down while preserving slash chords, complex voicings, and even optional flat notation.
+    </p>
+  </div>
+
+  <div class="feature-card">
+    <span class="feature-icon">
+      <img src="images/keyboard.svg" alt="Keyboard friendly">
+    </span>
+    <h3 class="feature-title">Keyboard friendly</h3>
+    <p class="feature-text">
+      Use command shortcuts for pasting, copying, and transposing so your workflow stays lightning fast.
+    </p>
+  </div>
+
+  <div class="feature-card">
+    <span class="feature-icon">
+      <img src="images/clean.svg" alt="Chord-aware cleanup">
+    </span>
+    <h3 class="feature-title">Chord-aware cleanup</h3>
+    <p class="feature-text">
+      Automatically handles mixed chord/lyric lines, connectors, and tricky formatting like “Cm - F/A” without breaking alignment.
+    </p>
+  </div>
+</div>
+    </section>
+
+  </main>
+
+  <footer>
+    © <script>document.write(new Date().getFullYear());</script> Ultimate Guitar to ChordPro Converter.
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
