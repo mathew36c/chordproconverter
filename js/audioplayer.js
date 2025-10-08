@@ -70,42 +70,93 @@ async function ensureSampler() {
   window.addEventListener(
     eventType,
     () => {
-      Tone.start().catch((error) => {
-        console.warn("Tone.start() failed:", error);
-      });
+      if (typeof Tone !== 'undefined') {
+        Tone.start().catch((error) => {
+          console.warn("Tone.start() failed:", error);
+        });
+      }
     },
     { once: true, passive: true }
   );
 });
 
-// Convert a note to match our available samples
-function normalizeNote(note) {
-  // Get pitch class and octave
-  const match = note.match(/^([A-G])([#b]?)(\d+)$/);
+// Simple chord parsing without Tonal.js dependency
+function parseChordSymbol(symbol) {
+  // Basic chord root notes mapping
+  const noteMap = {
+    'C': ['C', 'E', 'G'],
+    'C#': ['C#', 'F', 'G#'],
+    'Db': ['C#', 'F', 'G#'],
+    'D': ['D', 'F#', 'A'],
+    'D#': ['D#', 'G', 'A#'],
+    'Eb': ['D#', 'G', 'A#'],
+    'E': ['E', 'G#', 'B'],
+    'F': ['F', 'A', 'C'],
+    'F#': ['F#', 'A#', 'C#'],
+    'Gb': ['F#', 'A#', 'C#'],
+    'G': ['G', 'B', 'D'],
+    'G#': ['G#', 'C', 'D#'],
+    'Ab': ['G#', 'C', 'D#'],
+    'A': ['A', 'C#', 'E'],
+    'A#': ['A#', 'D', 'F'],
+    'Bb': ['A#', 'D', 'F'],
+    'B': ['B', 'D#', 'F#']
+  };
+
+  // Minor chord adjustments (flatten the third)
+  const minorMap = {
+    'C': ['C', 'D#', 'G'],
+    'C#': ['C#', 'E', 'G#'],
+    'D': ['D', 'F', 'A'],
+    'D#': ['D#', 'F#', 'A#'],
+    'E': ['E', 'G', 'B'],
+    'F': ['F', 'G#', 'C'],
+    'F#': ['F#', 'A', 'C#'],
+    'G': ['G', 'A#', 'D'],
+    'G#': ['G#', 'B', 'D#'],
+    'A': ['A', 'C', 'E'],
+    'A#': ['A#', 'C#', 'F'],
+    'B': ['B', 'D', 'F#']
+  };
+
+  // Parse the chord symbol
+  const match = symbol.match(/^([A-G][#b]?)(.*)$/);
   if (!match) return null;
+
+  const [, root, suffix] = match;
+  const isMinor = suffix.includes('m') && !suffix.includes('maj');
   
-  let [, letter, accidental, octave] = match;
-  
-  // Convert flats to sharps
-  if (accidental === 'b') {
+  // Normalize root (convert flats to sharps)
+  let normalizedRoot = root;
+  if (root.includes('b')) {
     const flatToSharp = {
-      'Cb': { note: 'B', octave: -1 },
-      'Db': { note: 'C#', octave: 0 },
-      'Eb': { note: 'D#', octave: 0 },
-      'Fb': { note: 'E', octave: -1 },
-      'Gb': { note: 'F#', octave: 0 },
-      'Ab': { note: 'G#', octave: 0 },
-      'Bb': { note: 'A#', octave: 0 }
+      'Cb': 'B', 'Db': 'C#', 'Eb': 'D#', 'Fb': 'E',
+      'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#'
     };
-    
-    const conversion = flatToSharp[letter + 'b'];
-    if (conversion) {
-      const adjustedOctave = parseInt(octave) + conversion.octave;
-      return `${conversion.note}${adjustedOctave}`;
+    normalizedRoot = flatToSharp[root] || root;
+  }
+
+  // Get basic triad
+  let notes = isMinor ? minorMap[normalizedRoot] : noteMap[normalizedRoot];
+  if (!notes) {
+    // Fallback to major if not found
+    notes = noteMap[normalizedRoot] || ['C', 'E', 'G'];
+  }
+
+  // Handle 7th chords
+  if (suffix.includes('7')) {
+    const seventhMap = {
+      'C': 'B', 'C#': 'C', 'D': 'C#', 'D#': 'D',
+      'E': 'D#', 'F': 'E', 'F#': 'F', 'G': 'F#',
+      'G#': 'G', 'A': 'G#', 'A#': 'A', 'B': 'A#'
+    };
+    const seventh = seventhMap[normalizedRoot];
+    if (seventh && !notes.includes(seventh)) {
+      notes.push(seventh);
     }
   }
-  
-  return `${letter}${accidental}${octave}`;
+
+  return notes;
 }
 
 // Check if a note is available in our samples
@@ -132,57 +183,57 @@ function findAvailableOctave(pitchClass, preferredOctave) {
 }
 
 function chordToNotes(symbol) {
-  const [mainSymbol, slashBass] = symbol.split("/");
-  const chord = Tonal.Chord.get(mainSymbol);
+  // Use Tonal if available, otherwise use simple parser
+  if (typeof Tonal !== 'undefined' && Tonal.Chord) {
+    const [mainSymbol, slashBass] = symbol.split("/");
+    const chord = Tonal.Chord.get(mainSymbol);
+    
+    if (!chord.empty) {
+      const notes = chord.notes;
+      const voicedNotes = [];
+
+      notes.forEach((note, index) => {
+        const pc = Tonal.Note.pitchClass(note);
+        // Convert flats to sharps for our samples
+        let normalizedPc = pc;
+        if (pc.includes('b')) {
+          const flatToSharp = {
+            'Cb': 'B', 'Db': 'C#', 'Eb': 'D#', 'Fb': 'E',
+            'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#'
+          };
+          normalizedPc = flatToSharp[pc] || pc;
+        }
+        
+        const targetOctave = index === 0 ? 3 : 4;
+        const availableNote = findAvailableOctave(normalizedPc, targetOctave);
+        if (availableNote && !voicedNotes.includes(availableNote)) {
+          voicedNotes.push(availableNote);
+        }
+      });
+
+      if (voicedNotes.length > 0) {
+        return { notes: voicedNotes, bass: null };
+      }
+    }
+  }
+
+  // Fallback to simple parser
+  const [mainSymbol] = symbol.split("/");
+  const notes = parseChordSymbol(mainSymbol);
   
-  if (chord.empty) {
-    console.warn(`Unknown chord: ${symbol}`);
+  if (!notes) {
+    console.warn(`Cannot parse chord: ${symbol}`);
     return null;
   }
 
-  // Get the notes from the chord
-  const notes = chord.notes;
   const voicedNotes = [];
-
-  notes.forEach((note, index) => {
-    const pc = Tonal.Note.pitchClass(note);
-    const normalized = normalizeNote(`${pc}3`); // Start with octave 3
-    if (!normalized) return;
-    
-    const notePitchClass = normalized.slice(0, -1);
-    
-    // Determine octave based on position and note
-    let targetOctave;
-    if (index === 0) {
-      // Root note - usually lower
-      targetOctave = 3;
-    } else {
-      // Other notes - distribute across octaves
-      if (['F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].includes(notePitchClass.replace('#', ''))) {
-        targetOctave = 3;
-      } else {
-        targetOctave = 4;
-      }
-    }
-    
-    const availableNote = findAvailableOctave(notePitchClass, targetOctave);
+  notes.forEach((pc, index) => {
+    const targetOctave = index === 0 ? 3 : 4;
+    const availableNote = findAvailableOctave(pc, targetOctave);
     if (availableNote && !voicedNotes.includes(availableNote)) {
       voicedNotes.push(availableNote);
     }
   });
-
-  // Add octave doubling if we have too few notes
-  if (voicedNotes.length < 3 && notes.length > 0) {
-    const rootPc = Tonal.Note.pitchClass(notes[0]);
-    const normalized = normalizeNote(`${rootPc}4`);
-    if (normalized) {
-      const notePitchClass = normalized.slice(0, -1);
-      const rootHigher = findAvailableOctave(notePitchClass, 4);
-      if (rootHigher && !voicedNotes.includes(rootHigher)) {
-        voicedNotes.push(rootHigher);
-      }
-    }
-  }
 
   if (voicedNotes.length === 0) {
     console.warn(`No playable notes for chord: ${symbol}`);
@@ -190,23 +241,17 @@ function chordToNotes(symbol) {
   }
 
   console.log(`Chord "${symbol}": ${notes.join(", ")} -> ${voicedNotes.join(", ")}`);
-
-  // Handle bass note
-  let bass = null;
-  if (slashBass) {
-    const bassPc = Tonal.Note.pitchClass(slashBass);
-    const normalizedBass = normalizeNote(`${bassPc}2`);
-    if (normalizedBass) {
-      const bassPitchClass = normalizedBass.slice(0, -1);
-      bass = findAvailableOctave(bassPitchClass, 2) || findAvailableOctave(bassPitchClass, 3);
-    }
-  }
-
-  return { notes: voicedNotes, bass };
+  return { notes: voicedNotes, bass: null };
 }
 
 async function playChord(symbol) {
   try {
+    // Check if Tone.js is loaded
+    if (typeof Tone === 'undefined') {
+      console.error("Tone.js is not loaded");
+      return;
+    }
+
     const activeSampler = await ensureSampler();
     if (!activeSampler) {
       console.error("Sampler not available");
@@ -219,7 +264,7 @@ async function playChord(symbol) {
       return;
     }
 
-    console.log(`Playing chord "${symbol}": [${parsed.notes.join(", ")}]${parsed.bass ? ` + bass ${parsed.bass}` : ""}`);
+    console.log(`Playing chord "${symbol}": [${parsed.notes.join(", ")}]`);
 
     const now = Tone.now();
     const strumGap = 0.025; // Guitar strum timing
@@ -238,8 +283,16 @@ async function playChord(symbol) {
   }
 }
 
-// Wait for DOM and attach event listener
+// Wait for DOM and libraries to load
 document.addEventListener("DOMContentLoaded", () => {
+  // Check if libraries are loaded
+  if (typeof Tone === 'undefined') {
+    console.error("Tone.js library not loaded");
+  }
+  if (typeof Tonal === 'undefined') {
+    console.warn("Tonal.js library not loaded - using fallback chord parser");
+  }
+
   const outputEl = document.getElementById("outputDisplay");
   if (!outputEl) {
     console.warn("Output display element not found");
