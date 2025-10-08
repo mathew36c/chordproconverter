@@ -91,14 +91,39 @@ function chordToNotes(symbol) {
     return null;
   }
 
-  const notes = chord.notes.map(toGuitarNote);
+  // Get the notes from the chord
+  const notes = chord.notes;
+
+  // Voice the notes: root at octave 3, others at octave 4
+  const voicedNotes = notes.map((note, index) => {
+    const pc = Tonal.Note.pitchClass(note);
+    const enh = Tonal.Note.enharmonic(pc);
+    const octave = index === 0 ? 3 : 4;
+    return `${enh}${octave}`;
+  });
+
+  // Ensure we have at least 4 notes: if fewer than 4, add the root at octave 4 as an octave reinforcement/double
+  if (voicedNotes.length < 4) {
+    const rootPc = Tonal.Note.pitchClass(notes[0]);
+    const rootEnh = Tonal.Note.enharmonic(rootPc);
+    voicedNotes.push(`${rootEnh}4`);
+  }
+
+  // Log the parsed chord and notes
+  console.log(`Parsed chord "${symbol}": original notes ${notes.join(", ")} -> voiced notes ${voicedNotes.join(", ")}`);
+
+  // Handle bass if present
   const bass = slashBass
-    ? toGuitarNote(slashBass)
+    ? `${Tonal.Note.enharmonic(Tonal.Note.pitchClass(slashBass))}2` // Bass at octave 2 for lower sound
     : chord.bass
-    ? toGuitarNote(chord.bass)
+    ? `${Tonal.Note.enharmonic(Tonal.Note.pitchClass(chord.bass))}2`
     : undefined;
 
-  return { notes, bass };
+  if (bass) {
+    console.log(`Chord "${symbol}": bass note ${bass}`);
+  }
+
+  return { notes: voicedNotes, bass };
 }
 
 async function playChord(symbol) {
@@ -107,6 +132,9 @@ async function playChord(symbol) {
 
   const parsed = chordToNotes(symbol);
   if (!parsed) return;
+
+  // Log what we're about to play
+  console.log(`Playing chord "${symbol}": notes [${parsed.notes.join(", ")}]${parsed.bass ? `, bass [${parsed.bass}]` : ""}`);
 
   const now = Tone.now();
   const strumGap = 0.03;
