@@ -211,6 +211,25 @@ function escapeHtml(str) {
     .replace(/'/g, "&#39;");
 }
 
+function escapeAttribute(str) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+// (unchanged until highlightChordPro)
+function escapeAttribute(str) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 function highlightChordPro(text) {
   if (!text) return "";
   let result = "";
@@ -248,7 +267,8 @@ function highlightChordPro(text) {
       const closingIndex = text.indexOf("]", i);
       if (closingIndex !== -1) {
         const inner = text.slice(i + 1, closingIndex);
-        result += `<span class="bracket">[</span><span class="chord">${escapeHtml(inner)}</span><span class="bracket">]</span>`;
+        const chordData = escapeAttribute(inner.trim());
+        result += `<span class="chord" data-chord="${chordData}"><span class="bracket">[</span><span class="chord-text">${escapeHtml(inner)}</span><span class="bracket">]</span></span>`;
         i = closingIndex + 1;
         continue;
       }
@@ -275,6 +295,8 @@ function highlightChordPro(text) {
 
   return result;
 }
+
+// rest of script.js unchanged
 
 function mod(n, m) {
   return ((n % m) + m) % m;
