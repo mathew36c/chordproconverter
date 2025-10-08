@@ -15,8 +15,6 @@ const SAMPLE_FILES = [
 // Create URL map - map from note format (C#4) to file format (Cs4)
 const samplerUrls = {};
 SAMPLE_FILES.forEach(filename => {
-  // Convert filename format to note format for Tone.js
-  // As2 -> A#2, Cs3 -> C#3, etc.
   const noteFormat = filename.replace(/s(\d)/, '#$1');
   samplerUrls[noteFormat] = `${filename}.${SAMPLE_EXT}`;
 });
@@ -25,11 +23,36 @@ console.log("Available samples:", Object.keys(samplerUrls).sort());
 
 let sampler = null;
 let samplerPromise = null;
+let loadingStartTime = null;
+
+// Loading indicator functions
+function showLoadingIndicator() {
+  const indicator = document.getElementById('audioLoadingIndicator');
+  if (indicator) {
+    indicator.classList.remove('hidden');
+    loadingStartTime = Date.now();
+  }
+}
+
+function hideLoadingIndicator() {
+  const indicator = document.getElementById('audioLoadingIndicator');
+  if (indicator) {
+    // Ensure minimum display time of 500ms for better UX
+    const elapsed = Date.now() - loadingStartTime;
+    const delay = Math.max(0, 500 - elapsed);
+    
+    setTimeout(() => {
+      indicator.classList.add('hidden');
+    }, delay);
+  }
+}
 
 async function ensureSampler() {
   if (sampler) return sampler;
 
   if (!samplerPromise) {
+    showLoadingIndicator();
+    
     samplerPromise = (async () => {
       await Tone.start();
       const ctx = Tone.getContext();
@@ -38,6 +61,8 @@ async function ensureSampler() {
       }
 
       return await new Promise((resolve, reject) => {
+        console.log("Starting to load guitar samples...");
+        
         const createdSampler = new Tone.Sampler({
           urls: samplerUrls,
           baseUrl: SAMPLE_BASE_URL,
@@ -46,17 +71,20 @@ async function ensureSampler() {
           onload: () => {
             sampler = createdSampler;
             sampler.context.lookAhead = 0.05;
-            console.log("Acoustic guitar samples loaded");
+            console.log("✓ Acoustic guitar samples loaded successfully");
+            hideLoadingIndicator();
             resolve(createdSampler);
           },
           onerror: (error) => {
-            console.error("Sampler load error:", error);
+            console.error("✗ Sampler load error:", error);
+            hideLoadingIndicator();
             reject(error);
           }
         }).toDestination();
       });
     })().catch((error) => {
       samplerPromise = null;
+      hideLoadingIndicator();
       console.error("Failed to initialize sampler:", error);
       throw error;
     });
@@ -82,6 +110,9 @@ async function ensureSampler() {
 
 // Simple chord parsing without Tonal.js dependency
 function parseChordSymbol(symbol) {
+  // Handle slash chords
+  const [mainChord, bassNote] = symbol.split('/');
+  
   // Basic chord root notes mapping
   const noteMap = {
     'C': ['C', 'E', 'G'],
@@ -103,7 +134,7 @@ function parseChordSymbol(symbol) {
     'B': ['B', 'D#', 'F#']
   };
 
-  // Minor chord adjustments (flatten the third)
+  // Minor chord adjustments
   const minorMap = {
     'C': ['C', 'D#', 'G'],
     'C#': ['C#', 'E', 'G#'],
@@ -119,8 +150,8 @@ function parseChordSymbol(symbol) {
     'B': ['B', 'D', 'F#']
   };
 
-  // Parse the chord symbol
-  const match = symbol.match(/^([A-G][#b]?)(.*)$/);
+  // Parse the main chord
+  const match = mainChord.match(/^([A-G][#b]?)(.*)$/);
   if (!match) return null;
 
   const [, root, suffix] = match;
@@ -139,7 +170,6 @@ function parseChordSymbol(symbol) {
   // Get basic triad
   let notes = isMinor ? minorMap[normalizedRoot] : noteMap[normalizedRoot];
   if (!notes) {
-    // Fallback to major if not found
     notes = noteMap[normalizedRoot] || ['C', 'E', 'G'];
   }
 
@@ -156,7 +186,22 @@ function parseChordSymbol(symbol) {
     }
   }
 
-  return notes;
+  // Parse bass note if present
+  let bass = null;
+  if (bassNote) {
+    // Normalize bass note
+    let normalizedBass = bassNote;
+    if (bassNote.includes('b')) {
+      const flatToSharp = {
+        'Cb': 'B', 'Db': 'C#', 'Eb': 'D#', 'Fb': 'E',
+        'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#'
+      };
+      normalizedBass = flatToSharp[bassNote] || bassNote;
+    }
+    bass = normalizedBass;
+  }
+
+  return { notes, bass };
 }
 
 // Check if a note is available in our samples
@@ -183,7 +228,7 @@ function findAvailableOctave(pitchClass, preferredOctave) {
 }
 
 function chordToNotes(symbol) {
-  // Use Tonal if available, otherwise use simple parser
+  // Use Tonal if available
   if (typeof Tonal !== 'undefined' && Tonal.Chord) {
     const [mainSymbol, slashBass] = symbol.split("/");
     const chord = Tonal.Chord.get(mainSymbol);
@@ -211,23 +256,40 @@ function chordToNotes(symbol) {
         }
       });
 
+      // Handle slash bass
+      let bass = null;
+      if (slashBass) {
+        const bassPc = Tonal.Note.pitchClass(slashBass);
+        let normalizedBass = bassPc;
+        if (bassPc.includes('b')) {
+          const flatToSharp = {
+            'Cb': 'B', 'Db': 'C#', 'Eb': 'D#', 'Fb': 'E',
+            'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#'
+          };
+          normalizedBass = flatToSharp[bassPc] || bassPc;
+        }
+        
+        // Try to find bass note in lower octaves
+        bass = findAvailableOctave(normalizedBass, 2) || 
+               findAvailableOctave(normalizedBass, 3);
+      }
+
       if (voicedNotes.length > 0) {
-        return { notes: voicedNotes, bass: null };
+        return { notes: voicedNotes, bass };
       }
     }
   }
 
   // Fallback to simple parser
-  const [mainSymbol] = symbol.split("/");
-  const notes = parseChordSymbol(mainSymbol);
+  const parsed = parseChordSymbol(symbol);
   
-  if (!notes) {
+  if (!parsed) {
     console.warn(`Cannot parse chord: ${symbol}`);
     return null;
   }
 
   const voicedNotes = [];
-  notes.forEach((pc, index) => {
+  parsed.notes.forEach((pc, index) => {
     const targetOctave = index === 0 ? 3 : 4;
     const availableNote = findAvailableOctave(pc, targetOctave);
     if (availableNote && !voicedNotes.includes(availableNote)) {
@@ -235,13 +297,20 @@ function chordToNotes(symbol) {
     }
   });
 
+  // Handle bass note
+  let bass = null;
+  if (parsed.bass) {
+    bass = findAvailableOctave(parsed.bass, 2) || 
+           findAvailableOctave(parsed.bass, 3);
+  }
+
   if (voicedNotes.length === 0) {
     console.warn(`No playable notes for chord: ${symbol}`);
     return null;
   }
 
-  console.log(`Chord "${symbol}": ${notes.join(", ")} -> ${voicedNotes.join(", ")}`);
-  return { notes: voicedNotes, bass: null };
+  console.log(`Chord "${symbol}": ${parsed.notes.join(", ")} -> ${voicedNotes.join(", ")}${bass ? ` + bass ${bass}` : ''}`);
+  return { notes: voicedNotes, bass };
 }
 
 async function playChord(symbol) {
@@ -264,26 +333,27 @@ async function playChord(symbol) {
       return;
     }
 
-    console.log(`Playing chord "${symbol}": [${parsed.notes.join(", ")}]`);
+    console.log(`Playing chord "${symbol}": [${parsed.notes.join(", ")}]${parsed.bass ? ` + bass ${parsed.bass}` : ''}`);
 
     const now = Tone.now();
-    const strumGap = 0.025; // Guitar strum timing
+    const strumGap = 0.025;
 
-    // Play bass note first if present
+    // Play bass note first if present (louder and slightly earlier)
     if (parsed.bass) {
-      activeSampler.triggerAttackRelease(parsed.bass, "2n", now - 0.01, 0.9);
+      activeSampler.triggerAttackRelease(parsed.bass, "2n", now - 0.02, 0.85);
     }
 
     // Strum through the chord notes
     parsed.notes.forEach((note, index) => {
-      activeSampler.triggerAttackRelease(note, "2n", now + index * strumGap, 0.7);
+      const velocity = parsed.bass ? 0.6 : 0.7; // Slightly quieter if bass is present
+      activeSampler.triggerAttackRelease(note, "2n", now + index * strumGap, velocity);
     });
   } catch (error) {
     console.error("Error playing chord:", error);
   }
 }
 
-// Wait for DOM and libraries to load
+// Preload samples on page load (optional - for better first-click experience)
 document.addEventListener("DOMContentLoaded", () => {
   // Check if libraries are loaded
   if (typeof Tone === 'undefined') {
@@ -298,6 +368,14 @@ document.addEventListener("DOMContentLoaded", () => {
     console.warn("Output display element not found");
     return;
   }
+
+  // Preload samples after a short delay
+  setTimeout(() => {
+    console.log("Preloading guitar samples...");
+    ensureSampler().catch(err => {
+      console.error("Failed to preload samples:", err);
+    });
+  }, 1000);
 
   outputEl.addEventListener("click", async (event) => {
     const chordEl = event.target.closest(".chord");
