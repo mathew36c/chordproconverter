@@ -28,6 +28,8 @@ const sectionMatchers = [
   { regex: /^instrumental\b/i, canonical: "Instrumental" },
   { regex: /^interlude\b/i, canonical: "Interlude" },
   { regex: /^solo\b/i, canonical: "Solo" },
+  { regex: /^riff\b/i, canonical: "Riff" },
+  { regex: /^adlib\b/i, canonical: "Adlib" },
   { regex: /^tag\b/i, canonical: "Tag" },
   { regex: /^refrain\b/i, canonical: "Refrain" },
   { regex: /^prelude\b/i, canonical: "Prelude" },
@@ -157,6 +159,10 @@ function convertToChordPro(text) {
         pushLine("");
       }
       pushLine(`{comment: ${sectionName}}`);
+      // Skip blank lines immediately following a section header
+      while (i + 1 < lines.length && lines[i + 1].trim() === "") {
+        i++;
+      }
       continue;
     }
 
@@ -167,29 +173,73 @@ function convertToChordPro(text) {
       chordTokens.some(isPureChord);
 
     if (isChordLine) {
-      const nextLine = i + 1 < lines.length ? lines[i + 1] : "";
+      // Look ahead for the next content line, skipping blank lines
+      let nextLineIndex = i + 1;
+      while (nextLineIndex < lines.length && lines[nextLineIndex].trim() === "") {
+        nextLineIndex++;
+      }
+
+      const nextLine = nextLineIndex < lines.length ? lines[nextLineIndex] : "";
       const nextTrimmed = nextLine.trim();
       const nextTokens = nextTrimmed.length ? getChordTokens(nextTrimmed) : [];
+
       const nextIsChordLine =
         nextTokens.length > 0 &&
         nextTokens.every(isChordToken) &&
         nextTokens.some(isPureChord);
-      const nextIsSection = detectSection(nextLine);
-      const nextIsEmpty = nextTrimmed === "";
 
-      if (!nextLine || nextIsChordLine || nextIsSection || nextIsEmpty) {
-        const tokens = chordTokens;
-        const chordLineOutput = tokens.map((token) => `[${token}]`).join("").replace(/\s+$/g, "");
-        pushLine(chordLineOutput);
-      } else {
+      const nextIsSection = detectSection(nextLine);
+
+      // It is a lyric line if it exists, is not a chord line, and is not a section header
+      const isNextLyrics = nextLine && !nextIsChordLine && !nextIsSection;
+
+      if (isNextLyrics) {
         const merged = mergeChordsAndLyrics(line, nextLine);
-        pushLine(merged);
-        i += 1;
+        // Clean up extra spaces (formatted nicely), handling tabs and NBSP
+        const cleaned = merged.replace(/\s{2,}/g, " ").trim();
+        pushLine(cleaned);
+
+        // Skip over the lyric line we just consumed
+        let currentSkipIndex = nextLineIndex;
+
+        // Look ahead and skip subsequent blank lines to avoid "extra next lines"
+        while (currentSkipIndex + 1 < lines.length && lines[currentSkipIndex + 1].trim() === "") {
+          currentSkipIndex++;
+        }
+        
+        i = currentSkipIndex;
+      } else {
+        // Standalone chord line (no lyrics following or followed by section/chords)
+        const tokens = chordTokens;
+        const chordLineOutput = tokens.map((token) => `[${token}]`).join("");
+        pushLine(chordLineOutput);
+
+        // Consume subsequent blank lines for standalone chord lines too
+        // This fixes the gap between multi-line chord progressions or between intro chords and Verse 1
+        // We want to "eat" the blank lines so they don't become double line breaks in the output.
+        // nextLineIndex already points to the first non-blank line (or end of file).
+        // If nextLineIndex > i + 1, it means we skipped blank lines.
+        
+        // We update 'i' to point just before that next non-blank line so the next loop iteration picks it up.
+        if (nextLineIndex > i + 1) {
+           i = nextLineIndex - 1;
+        }
       }
       continue;
     }
 
-    pushLine(line.replace(/\s+$/g, ""));
+    // Regular lyric line (or text that wasn't matched as chords)
+
+    // Check if it's a tab line (e.g. starts with "e|", "B|", "G|", "D|", "A|", "E|")
+    if (/^[eBgDdAEx]\|/.test(trimmedLine) || trimmedLine.includes("-|-") || /^[-\d|/hpsbrv~]+$/.test(trimmedLine)) {
+        // Preserve tab lines exactly as is (monospaced font will handle alignment)
+        // Just trim the end to avoid trailing spaces
+        pushLine(line.trimEnd());
+        continue;
+    }
+
+    // Clean up extra spaces and trim leading/trailing whitespace for regular lyrics
+    pushLine(line.replace(/\s{2,}/g, " ").trim());
   }
 
   while (outputLines.length && outputLines[0] === "") {
