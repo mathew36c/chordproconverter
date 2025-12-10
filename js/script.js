@@ -9,11 +9,13 @@ const transposeDown = document.getElementById("transposeDown");
 const transposeUp = document.getElementById("transposeUp");
 const transposeValue = document.getElementById("transposeValue");
 const flatsToggle = document.getElementById("flatsToggle");
+const groupChordsToggle = document.getElementById("groupChordsToggle");
 
 let baseOutputText = "";
 let outputText = "";
 let transposeSteps = 0;
 let useFlats = false;
+let groupChords = false;
 
 const MIN_TRANSPOSE = -11;
 const MAX_TRANSPOSE = 11;
@@ -73,7 +75,7 @@ function detectSection(line) {
 
   cleaned = cleaned.replace(/\s*[:\-]+\s*$/, "");
   cleaned = cleaned.replace(/([A-Za-z])(\d)/g, "$1 $2");
-  cleaned = cleaned.replace(/(\d)([A-Za-z])/g, "$1 $2").trim();
+  cleaned = cleaned.replace(/(\d)([A-Za-z])/g, (match, d, l) => (l.toLowerCase() === 'x' ? match : `${d} ${l}`)).trim();
 
   for (const matcher of sectionMatchers) {
     const match = cleaned.match(matcher.regex);
@@ -95,8 +97,70 @@ function isChordToken(token) {
   return isPureChord(token) || connectorRegex.test(token);
 }
 
+function splitJammedChords(token) {
+  // First, check if token contains spaces - if so, split by spaces and process each part
+  if (token.includes(' ')) {
+    const parts = token.split(/\s+/).filter(Boolean);
+    const allResults = [];
+    for (const part of parts) {
+      allResults.push(...splitJammedChords(part));
+    }
+    // Only return split results if all parts were successfully parsed
+    if (allResults.length > 0 && allResults.every(r => isChordToken(r))) {
+      return allResults;
+    }
+    return [token]; // Return original if split didn't work
+  }
+
+  if (isChordToken(token)) return [token];
+
+  const results = [];
+  let remaining = token;
+  let stuck = false;
+
+  while (remaining.length > 0 && !stuck) {
+    let bestMatch = null;
+    let bestLen = 0;
+
+    // 1. Try to find the longest valid chord prefix
+    for (let i = 1; i <= Math.min(12, remaining.length); i++) {
+      const sub = remaining.substring(0, i);
+      if (isPureChord(sub)) {
+        if (i > bestLen) { bestMatch = sub; bestLen = i; }
+      }
+    }
+
+    if (bestMatch) {
+      results.push(bestMatch);
+      remaining = remaining.substring(bestLen);
+    } else {
+      // 2. If no chord match, check if it starts with a valid connector
+      // We match against the connectorRegex parts: separators or repeat indicators (x3)
+      // connectorRegex = /^[-–—~]+$|^[:|]+$|^x\d+$/i;
+      // We look for a prefix that matches one of these.
+      const connectorMatch = remaining.match(/^([-–—~]+|[:|]+|x\d+)/i);
+      if (connectorMatch) {
+        results.push(connectorMatch[0]);
+        remaining = remaining.substring(connectorMatch[0].length);
+      } else {
+        stuck = true;
+      }
+    }
+  }
+
+  if (!stuck && remaining.length === 0) return results;
+  return [token];
+}
+
 function getChordTokens(line) {
-  return line.trim().split(/\s+/).filter(Boolean);
+  const rawTokens = line.trim().split(/\s+/).filter(Boolean);
+  const refinedTokens = [];
+
+  for (const t of rawTokens) {
+    refinedTokens.push(...splitJammedChords(t));
+  }
+
+  return refinedTokens;
 }
 
 function extractChordPositions(chordLine) {
@@ -105,8 +169,32 @@ function extractChordPositions(chordLine) {
   let match;
   while ((match = regex.exec(chordLine)) !== null) {
     const token = match[0];
-    if (isPureChord(token)) {
-      tokens.push({ chord: token, position: match.index });
+    const startIndex = match.index;
+
+    // 1. Try treating as single token first (performance + standard case)
+    if (isChordToken(token)) {
+      tokens.push({ chord: token, position: startIndex });
+      continue;
+    }
+
+    // 2. Try splitting jammed chords
+    // This handles cases like "Cm-F/A" where regex sees it as one token but it contains multiple
+    const split = splitJammedChords(token);
+
+    // If split returns just the original token, and it wasn't a chord token, then it's lyrics/noise.
+    if (split.length === 1 && split[0] === token) {
+      continue;
+    }
+
+    // 3. Map split tokens back to their positions within the token
+    let searchStart = 0;
+    for (const part of split) {
+      // Find part staring from searchStart to ensure order
+      const partIndex = token.indexOf(part, searchStart);
+      if (partIndex !== -1) {
+        tokens.push({ chord: part, position: startIndex + partIndex });
+        searchStart = partIndex + part.length;
+      }
     }
   }
   return tokens;
@@ -114,13 +202,25 @@ function extractChordPositions(chordLine) {
 
 function mergeChordsAndLyrics(chordLine, lyricLine) {
   const lyric = typeof lyricLine === "string" ? lyricLine : "";
-  let processed = lyric;
   const chordPositions = extractChordPositions(chordLine);
 
-  for (let i = chordPositions.length - 1; i >= 0; i--) {
-    const { chord, position } = chordPositions[i];
-    const insertPos = position <= processed.length ? position : processed.length;
-    processed = `${processed.slice(0, insertPos)}[${chord}]${processed.slice(insertPos)}`;
+  // Separate chords into two groups:
+  // 1. Chords within the lyric line length (insert normally)
+  // 2. Chords beyond the lyric line length (append in order)
+  const originalLyricLength = lyric.length;
+  const chordsBeyond = chordPositions.filter(cp => cp.position >= originalLyricLength).sort((a, b) => a.position - b.position);
+  const chordsWithin = chordPositions.filter(cp => cp.position < originalLyricLength);
+
+  // Start by appending the chords that are beyond the original lyric length
+  let processed = lyric;
+  for (const { chord } of chordsBeyond) {
+    processed += `[${chord}]`;
+  }
+
+  // Now insert the chords that are within the original lyric length (in reverse order)
+  for (let i = chordsWithin.length - 1; i >= 0; i--) {
+    const { chord, position } = chordsWithin[i];
+    processed = `${processed.slice(0, position)}[${chord}]${processed.slice(position)}`;
   }
 
   return processed.replace(/\s+$/g, "");
@@ -206,12 +306,21 @@ function convertToChordPro(text) {
         while (currentSkipIndex + 1 < lines.length && lines[currentSkipIndex + 1].trim() === "") {
           currentSkipIndex++;
         }
-        
+
         i = currentSkipIndex;
       } else {
         // Standalone chord line (no lyrics following or followed by section/chords)
         const tokens = chordTokens;
-        const chordLineOutput = tokens.map((token) => `[${token}]`).join("");
+
+        let chordLineOutput;
+        if (groupChords) {
+          // Group chords: [Am Bm C]
+          chordLineOutput = `[${tokens.join(" ")}]`;
+        } else {
+          // Standard: [Am][Bm][C]
+          chordLineOutput = tokens.map((token) => `[${token}]`).join("");
+        }
+
         pushLine(chordLineOutput);
 
         // Consume subsequent blank lines for standalone chord lines too
@@ -219,10 +328,10 @@ function convertToChordPro(text) {
         // We want to "eat" the blank lines so they don't become double line breaks in the output.
         // nextLineIndex already points to the first non-blank line (or end of file).
         // If nextLineIndex > i + 1, it means we skipped blank lines.
-        
+
         // We update 'i' to point just before that next non-blank line so the next loop iteration picks it up.
         if (nextLineIndex > i + 1) {
-           i = nextLineIndex - 1;
+          i = nextLineIndex - 1;
         }
       }
       continue;
@@ -232,10 +341,10 @@ function convertToChordPro(text) {
 
     // Check if it's a tab line (e.g. starts with "e|", "B|", "G|", "D|", "A|", "E|")
     if (/^[eBgDdAEx]\|/.test(trimmedLine) || trimmedLine.includes("-|-") || /^[-\d|/hpsbrv~]+$/.test(trimmedLine)) {
-        // Preserve tab lines exactly as is (monospaced font will handle alignment)
-        // Just trim the end to avoid trailing spaces
-        pushLine(line.trimEnd());
-        continue;
+      // Preserve tab lines exactly as is (monospaced font will handle alignment)
+      // Just trim the end to avoid trailing spaces
+      pushLine(line.trimEnd());
+      continue;
     }
 
     // Clean up extra spaces and trim leading/trailing whitespace for regular lyrics
@@ -419,6 +528,21 @@ function transposeBracketContent(inner, steps, forceFlats) {
   const core = inner.slice(leading.length, inner.length - trailing.length);
   const trimmedCore = core.trim();
   if (!trimmedCore) return inner;
+
+  // Handle multiple chords separated by spaces (e.g., "Am Bm C")
+  // We split by space, transpose each token if it's a chord, then join back.
+  const tokens = trimmedCore.split(/\s+/);
+  if (tokens.length > 1) {
+    const transposedTokens = tokens.map(token => {
+      if (isPureChord(token)) {
+        return transposeChordSymbol(token, steps, forceFlats);
+      }
+      return token;
+    });
+    return `${leading}${transposedTokens.join(" ")}${trailing}`;
+  }
+
+  // Single token logic
   if (!isPureChord(trimmedCore)) return inner;
 
   const transposed = transposeChordSymbol(trimmedCore, steps, forceFlats);
@@ -452,6 +576,12 @@ function updateFlatsUI() {
   } else {
     flatsToggle.textContent = "Use flats";
   }
+}
+
+function updateGroupChordsUI() {
+  if (!groupChordsToggle) return;
+  groupChordsToggle.classList.toggle("active", groupChords);
+  groupChordsToggle.setAttribute("aria-pressed", groupChords ? "true" : "false");
 }
 
 function updateTransposedOutput() {
@@ -546,6 +676,15 @@ flatsToggle.addEventListener("click", () => {
   updateTransposedOutput();
 });
 
+if (groupChordsToggle) {
+  groupChordsToggle.addEventListener("click", () => {
+    groupChords = !groupChords;
+    updateGroupChordsUI();
+    updateOutput(); // Re-convert since grouping changes the base formatting
+  });
+}
+
 updateTransposeUI();
 updateFlatsUI();
+updateGroupChordsUI();
 updateOutput();

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
@@ -7,31 +8,35 @@
   <link rel="icon" type="image/x-icon" href="favicon.svg">
   <link rel="stylesheet" href="styles.css">
   <!-- Primary SEO -->
-<meta name="description" content="Ultimate Guitar to ChordPro Converter turns UG chord sheets into clean ChordPro charts with instant transposition.">
+  <meta name="description"
+    content="Ultimate Guitar to ChordPro Converter turns UG chord sheets into clean ChordPro charts with instant transposition.">
 
-<!-- Open Graph -->
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://ultimateguitartochordpro.com/">
-<meta property="og:title" content="Ultimate Guitar to ChordPro Converter">
-<meta property="og:description" content="Convert Ultimate Guitar chord sheets into tidy ChordPro charts and transpose keys on the fly.">
-<meta property="og:image" content="https://ultimateguitartochordpro.com/images/social-card.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:site_name" content="Ultimate Guitar to ChordPro Converter">
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://ultimateguitartochordpro.com/">
+  <meta property="og:title" content="Ultimate Guitar to ChordPro Converter">
+  <meta property="og:description"
+    content="Convert Ultimate Guitar chord sheets into tidy ChordPro charts and transpose keys on the fly.">
+  <meta property="og:image" content="https://ultimateguitartochordpro.com/images/social-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:site_name" content="Ultimate Guitar to ChordPro Converter">
 
-<!-- Twitter -->
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:url" content="https://ultimateguitartochordpro.com/">
-<meta name="twitter:title" content="Ultimate Guitar to ChordPro Converter">
-<meta name="twitter:description" content="Convert Ultimate Guitar chord sheets into tidy ChordPro charts and transpose keys on the fly.">
-<meta name="twitter:image" content="https://ultimateguitartochordpro.com/images/social-card.png">
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://ultimateguitartochordpro.com/">
+  <meta name="twitter:title" content="Ultimate Guitar to ChordPro Converter">
+  <meta name="twitter:description"
+    content="Convert Ultimate Guitar chord sheets into tidy ChordPro charts and transpose keys on the fly.">
+  <meta name="twitter:image" content="https://ultimateguitartochordpro.com/images/social-card.png">
 
-<!-- Schema.org -->
-<meta itemprop="name" content="Ultimate Guitar to ChordPro Converter">
-<meta itemprop="description" content="Convert Ultimate Guitar chord sheets into tidy ChordPro charts with instant transposition.">
-<meta itemprop="image" content="https://ultimateguitartochordpro.com/images/social-card.png">
+  <!-- Schema.org -->
+  <meta itemprop="name" content="Ultimate Guitar to ChordPro Converter">
+  <meta itemprop="description"
+    content="Convert Ultimate Guitar chord sheets into tidy ChordPro charts with instant transposition.">
+  <meta itemprop="image" content="https://ultimateguitartochordpro.com/images/social-card.png">
 
-<script type="application/ld+json">
+  <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebApplication",
@@ -48,11 +53,12 @@
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-DRQXF8PRBB"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
+  function gtag() { dataLayer.push(arguments); }
   gtag('js', new Date());
 
   gtag('config', 'G-DRQXF8PRBB');
 </script>
+
 <body>
   <div class="site-logo">
     <img src="images/logo.svg" alt="Ultimate Guitar to ChordPro Converter" width="175" height="40">
@@ -62,14 +68,15 @@
     <div class="hero-content">
       <h1 class="hero-title">Ultimate Guitar to ChordPro Converter</h1>
       <p class="hero-subtitle">
-        Paste any Ultimate Guitar chord sheet, convert it into clean ChordPro charts, and tweak keys instantly with smart transposition.
+        Paste any Ultimate Guitar chord sheet, convert it into clean ChordPro charts, and tweak keys instantly with
+        smart transposition.
       </p>
       <a class="hero-cta" href="#converter">Jump to the converter ↓</a>
     </div>
   </header>
 
   <main>
-      
+
     <section id="converter" class="converter-section">
       <div class="converter-wrapper">
         <div class="converter-grid">
@@ -150,17 +157,19 @@ Great is Thy faithfulness, Lord, unto me.</textarea>
               </div>
 
               <button id="flatsToggle" type="button" class="secondary" aria-pressed="false">Use flats</button>
+              <button id="groupChordsToggle" type="button" class="secondary" aria-pressed="false"
+                style="margin-left: 0.5rem;">Group chords</button>
 
               <span id="copyStatus" class="status" aria-live="polite"></span>
             </div>
           </div>
         </div>
-      <div id="audioLoadingIndicator" class="audio-loading-indicator">
-        <div class="loading-content">
-          <span class="loading-spinner"></span>
-          <span class="loading-text">Loading guitar sounds...</span>
+        <div id="audioLoadingIndicator" class="audio-loading-indicator">
+          <div class="loading-content">
+            <span class="loading-spinner"></span>
+            <span class="loading-text">Loading guitar sounds...</span>
+          </div>
         </div>
-      </div>
       </div>
     </section>
 
@@ -172,73 +181,78 @@ Great is Thy faithfulness, Lord, unto me.</textarea>
         </p>
       </div>
 
-<div class="features-grid">
-  <div class="feature-card">
-    <span class="feature-icon">
-      <img src="images/flash.svg" alt="Fast conversion">
-    </span>
-    <h3 class="feature-title">Fast conversion</h3>
-    <p class="feature-text">
-      Turn Ultimate Guitar sheets into proper ChordPro syntax with tidy spacing, single blank lines, and section comments.
-    </p>
-  </div>
+      <div class="features-grid">
+        <div class="feature-card">
+          <span class="feature-icon">
+            <img src="images/flash.svg" alt="Fast conversion">
+          </span>
+          <h3 class="feature-title">Fast conversion</h3>
+          <p class="feature-text">
+            Turn Ultimate Guitar sheets into proper ChordPro syntax with tidy spacing, single blank lines, and section
+            comments.
+          </p>
+        </div>
 
-  <div class="feature-card">
-    <span class="feature-icon">
-      <img src="images/dart.svg" alt="Accurate transposition">
-    </span>
-    <h3 class="feature-title">Accurate transposition</h3>
-    <p class="feature-text">
-      Shift keys up or down while preserving slash chords, complex voicings, and even optional flat notation.
-    </p>
-  </div>
+        <div class="feature-card">
+          <span class="feature-icon">
+            <img src="images/dart.svg" alt="Accurate transposition">
+          </span>
+          <h3 class="feature-title">Accurate transposition</h3>
+          <p class="feature-text">
+            Shift keys up or down while preserving slash chords, complex voicings, and even optional flat notation.
+          </p>
+        </div>
 
-  <div class="feature-card">
-    <span class="feature-icon">
-      <img src="images/keyboard.svg" alt="Keyboard friendly">
-    </span>
-    <h3 class="feature-title">Keyboard friendly</h3>
-    <p class="feature-text">
-      Use command shortcuts for pasting, copying, and transposing so your workflow stays lightning fast.
-    </p>
-  </div>
+        <div class="feature-card">
+          <span class="feature-icon">
+            <img src="images/keyboard.svg" alt="Keyboard friendly">
+          </span>
+          <h3 class="feature-title">Keyboard friendly</h3>
+          <p class="feature-text">
+            Use command shortcuts for pasting, copying, and transposing so your workflow stays lightning fast.
+          </p>
+        </div>
 
-  <div class="feature-card">
-    <span class="feature-icon">
-      <img src="images/clean.svg" alt="Chord-aware cleanup">
-    </span>
-    <h3 class="feature-title">Chord-aware cleanup</h3>
-    <p class="feature-text">
-      Automatically handles mixed chord/lyric lines, connectors, and tricky formatting like "Cm - F/A" without breaking alignment.
-    </p>
-  </div>
-</div>
+        <div class="feature-card">
+          <span class="feature-icon">
+            <img src="images/clean.svg" alt="Chord-aware cleanup">
+          </span>
+          <h3 class="feature-title">Chord-aware cleanup</h3>
+          <p class="feature-text">
+            Automatically handles mixed chord/lyric lines, connectors, and tricky formatting like "Cm - F/A" without
+            breaking alignment.
+          </p>
+        </div>
+      </div>
     </section>
 
-<section class="feature-request-section">
-  <div class="feature-request-card">
-    <h2 class="section-title">Request a Feature</h2>
-    <p class="section-subtitle">
-      Have an idea to make this tool even better? Need a specific feature for your workflow?
-    </p>
-    <a href="mailto:mathewgaralde@outlook.com?subject=Feature%20Request%20for%20ChordPro%20Converter" class="mailto-button">
-      Send Feature Request
-    </a>
-    <p class="feature-request-subtext">
-      We read every email and love hearing from musicians using this tool!
-    </p>
-  </div>
-</section>
+    <section class="feature-request-section">
+      <div class="feature-request-card">
+        <h2 class="section-title">Request a Feature</h2>
+        <p class="section-subtitle">
+          Have an idea to make this tool even better? Need a specific feature for your workflow?
+        </p>
+        <a href="mailto:mathewgaralde@outlook.com?subject=Feature%20Request%20for%20ChordPro%20Converter"
+          class="mailto-button">
+          Send Feature Request
+        </a>
+        <p class="feature-request-subtext">
+          We read every email and love hearing from musicians using this tool!
+        </p>
+      </div>
+    </section>
 
   </main>
 
   <footer>
-    © <script>document.write(new Date().getFullYear());</script> Ultimate Guitar to ChordPro Converter.
+    ©
+    <script>document.write(new Date().getFullYear());</script> Ultimate Guitar to ChordPro Converter.
   </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/tone@14.8.49/build/Tone.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/tonal/browser/tonal.min.js" defer></script>
-<script src="./js/script.js" defer></script>
-<script src="./js/audioplayer.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/tone@14.8.49/build/Tone.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/tonal/browser/tonal.min.js" defer></script>
+  <script src="./js/script.js" defer></script>
+  <script src="./js/audioplayer.js" defer></script>
 </body>
+
 </html>
