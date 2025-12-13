@@ -7,13 +7,51 @@
 let mediaLoaderDialog = null;
 let mediaPlayerContainer = null;
 let mediaPlayerWrapper = null;
+let mediaPlayerAnchor = null;
+let converterSection = null;
 let currentMediaElement = null;
+
+// State tracking
+let isAnchorVisible = true;
+let isConverterVisible = false;
 
 // Initialize when DOM is ready
 document.addEventListener("DOMContentLoaded", () => {
     mediaLoaderDialog = document.getElementById("mediaLoaderDialog");
     mediaPlayerContainer = document.getElementById("mediaPlayerContainer");
     mediaPlayerWrapper = document.getElementById("mediaPlayerWrapper");
+    mediaPlayerAnchor = document.getElementById("mediaPlayerAnchor");
+    converterSection = document.getElementById("converter");
+
+    // Initialize Intersection Observers for Floating Logic
+    if (mediaPlayerAnchor && converterSection) {
+        // Observer for the Anchor (Original Position)
+        // Threshold 0.95 ensures it floats as soon as it's slightly obscured (not fully visible)
+        // We use 0.95 instead of 1.0 to be safe with sub-pixel rendering and borders
+        const anchorObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                isAnchorVisible = entry.isIntersecting;
+                updateFloatingState();
+            });
+        }, {
+            root: null,
+            threshold: 0.95
+        });
+        anchorObserver.observe(mediaPlayerAnchor);
+
+        // Observer for the Converter Section (Working Area)
+        // Threshold 0 means "am I at all seeing the converter section?"
+        const converterObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                isConverterVisible = entry.isIntersecting;
+                updateFloatingState();
+            });
+        }, {
+            root: null,
+            threshold: 0
+        });
+        converterObserver.observe(converterSection);
+    }
 
     // Load Media button
     const loadMediaButton = document.getElementById("loadMediaButton");
@@ -133,6 +171,7 @@ function hideMediaDialog() {
 function showPlayer() {
     if (mediaPlayerContainer) {
         mediaPlayerContainer.classList.remove("hidden");
+        updateFloatingState();
     }
 }
 
@@ -142,6 +181,8 @@ function showPlayer() {
 function hidePlayer() {
     if (mediaPlayerContainer) {
         mediaPlayerContainer.classList.add("hidden");
+        mediaPlayerContainer.classList.remove("floating");
+        if (mediaPlayerAnchor) mediaPlayerAnchor.style.minHeight = "";
     }
     // Clean up current media
     if (mediaPlayerWrapper) {
@@ -426,5 +467,51 @@ function getFilenameFromUrl(url) {
         return filename || "Unknown";
     } catch {
         return "Unknown";
+    }
+}
+
+/**
+ * Update the floating state of the media player
+ * based on intersection observers
+ */
+function updateFloatingState() {
+    if (!mediaPlayerContainer || !currentMediaElement) return;
+
+    // If player is explicitly hidden, do not float
+    if (mediaPlayerContainer.classList.contains("hidden")) {
+        mediaPlayerContainer.classList.remove("floating");
+        if (mediaPlayerAnchor) mediaPlayerAnchor.style.minHeight = "";
+        return;
+    }
+
+    // Check where the anchor is relative to the viewport
+    let isAnchorAbove = false;
+    if (mediaPlayerAnchor) {
+        const rect = mediaPlayerAnchor.getBoundingClientRect();
+        // If the top of the anchor is negative, it means we have scrolled past it (it's above us)
+        // We use a small buffer (e.g., 0) to be precise
+        isAnchorAbove = rect.top <= 0;
+    }
+
+    // Logic: 
+    // 1. Must be in Component Section (working on tool)
+    // 2. Original Position must NOT be fully visible (!isAnchorVisible)
+    // 3. Original Position must be BELOW the viewport (not scrolled past)
+    const shouldFloat = isConverterVisible && !isAnchorVisible && !isAnchorAbove;
+
+    if (shouldFloat) {
+        // Only float if we have content
+        if (!mediaPlayerContainer.classList.contains("floating")) {
+            // Lock height of anchor to prevent layout shift
+            const height = mediaPlayerContainer.offsetHeight;
+            if (mediaPlayerAnchor) mediaPlayerAnchor.style.minHeight = height + "px";
+            mediaPlayerContainer.classList.add("floating");
+        }
+    } else {
+        if (mediaPlayerContainer.classList.contains("floating")) {
+            mediaPlayerContainer.classList.remove("floating");
+            // Reset anchor height
+            if (mediaPlayerAnchor) mediaPlayerAnchor.style.minHeight = "";
+        }
     }
 }

@@ -1350,3 +1350,58 @@ body {
   margin-bottom: 12px;
   color: var(--text);
 }
+
+/* --- Floating Player State --- */
+.media-player-container.floating {
+  position: fixed;
+  top: 90px;
+  /* Leaves room for potential sticky header */
+  right: 24px;
+  width: 340px;
+  /* Small player size */
+  max-width: 90vw;
+  margin: 0;
+  z-index: 1000;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  animation: floatIn 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+@keyframes floatIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Adjustments for floating audio player */
+.media-player-container.floating.mode-audio {
+  padding: 48px 24px 24px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+}
+
+/* Hide overlay title in floating mode unless hovered */
+.media-player-container.floating .media-title-overlay {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.media-player-container.floating:hover .media-title-overlay {
+  opacity: 1;
+}
+
+/* Make sure close button is easily accessible */
+.media-player-container.floating .media-close-floating {
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+}
