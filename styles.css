@@ -6,7 +6,8 @@
   --border: #E8D98C;
   --text: #111111;
   --muted: #6b7280;
-  --background: #FFFBE6;        /* warm base */
+  --background: #FFFBE6;
+  /* warm base */
   --surface: #ffffff;
   --brace: #1A8F1A;
   --comment-value: #B742F6;
@@ -25,7 +26,8 @@ html {
 
 body {
   margin: 0;
-  background-color: var(--background);   /* warm backdrop */
+  background-color: var(--background);
+  /* warm backdrop */
   color: var(--text);
 }
 
@@ -103,7 +105,8 @@ header.hero {
 main {
   background: var(--surface);
   border-radius: 40px 40px 0 0;
-  margin-top: -24px;                 /* overlap hero curve */
+  margin-top: -24px;
+  /* overlap hero curve */
   padding-top: 48px;
   display: flex;
   flex-direction: column;
@@ -148,6 +151,7 @@ section {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  height: 100%;
 }
 
 label {
@@ -183,6 +187,7 @@ textarea::placeholder {
   color: var(--muted);
 }
 
+.input-wrapper,
 .output-wrapper {
   flex: 1;
   display: flex;
@@ -581,7 +586,9 @@ footer {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-text {
@@ -591,6 +598,7 @@ footer {
 
 /* --- Fix mobile converter layout --- */
 @media (max-width: 960px) {
+
   /* Adjust main padding on mobile */
   main {
     padding-top: 24px;
@@ -699,7 +707,8 @@ footer {
 #outputDisplay {
   overflow-y: auto;
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
+  /* Smooth scrolling on iOS */
 }
 
 /* --- Fix feature cards on mobile --- */
@@ -721,7 +730,8 @@ footer {
 /* --- Improve button touch targets on mobile --- */
 @media (hover: none) and (pointer: coarse) {
   button {
-    min-height: 44px; /* iOS recommended touch target */
+    min-height: 44px;
+    /* iOS recommended touch target */
     min-width: 44px;
   }
 
@@ -740,6 +750,7 @@ footer {
 
 /* --- Fix viewport height issues on mobile --- */
 @media (max-width: 960px) {
+
   /* Use viewport height carefully to avoid issues with mobile browser chrome */
   header.hero {
     min-height: 50vh;
@@ -830,9 +841,512 @@ body {
   .feature-request-card {
     padding: 32px 20px;
   }
-  
+
   .mailto-button {
     font-size: 1rem;
     padding: 14px 24px;
   }
+}
+
+/* -------------- Media Player Styles -------------- */
+
+/* Hidden utility */
+.hidden {
+  display: none !important;
+}
+
+/* Media Loader Dialog */
+.media-loader-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+  backdrop-filter: blur(4px);
+}
+
+.media-loader-content {
+  background: var(--surface);
+  border-radius: 24px;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 24px 48px rgba(17, 17, 17, 0.2);
+  border: 1.5px solid var(--border);
+  overflow: hidden;
+}
+
+.media-loader-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--accent-soft);
+}
+
+.media-loader-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.media-close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, transform 0.1s ease;
+  padding: 0;
+}
+
+.media-close-btn:hover {
+  background: var(--accent);
+  transform: scale(1.05);
+}
+
+.media-loader-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.media-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.media-input-group label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+  margin-bottom: 0;
+}
+
+.media-input-group input[type="text"] {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.media-input-group input[type="text"]:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(255, 198, 0, 0.22);
+}
+
+.media-input-group input[type="file"] {
+  padding: 12px;
+  border: 1.5px dashed var(--border);
+  border-radius: 12px;
+  background: var(--background);
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.media-input-group input[type="file"]:hover {
+  border-color: var(--accent);
+}
+
+.media-input-group button {
+  align-self: flex-start;
+  padding: 12px 24px;
+}
+
+.media-divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.media-divider::before,
+.media-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Media Player Container - matches converter-grid styling */
+.media-player-container {
+  margin: 24px auto 0 auto;
+  background: black;
+  border-radius: 0;
+  padding: 0;
+  border: 1.5px solid var(--border);
+  box-shadow: 0 16px 32px rgba(17, 17, 17, 0.08);
+  overflow: hidden;
+  position: relative;
+  max-width: 900px;
+  width: 100%;
+  transition: all 0.3s ease;
+}
+
+/* Mode: YouTube (Fixed 16:9) */
+.media-player-container.mode-youtube {
+  aspect-ratio: 16 / 9;
+}
+
+/* Mode: Local Video (Adaptive) */
+.media-player-container.mode-video {
+  background: black;
+  aspect-ratio: auto;
+}
+
+/* Mode: Audio (Custom UI) */
+.media-player-container.mode-audio {
+  background: white;
+  /* Clean look for audio */
+  padding: 56px 32px 32px 32px;
+  /* Increased top padding to clear the Close button */
+  aspect-ratio: auto;
+  border-radius: 24px;
+  /* Restore proper rounding for audio player */
+}
+
+.media-player-container.mode-audio .media-player-wrapper {
+  background: transparent;
+  /* Remove black background for audio mode */
+  min-height: auto;
+}
+
+/* Custom Audio Player Styles */
+
+
+.audio-player-ui {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+}
+
+.audio-slider-container {
+  width: 100%;
+  position: relative;
+  height: 6px;
+  background: #f3f4f6;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.audio-progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: var(--accent);
+  /* Main accent yellow */
+  border-radius: 3px;
+  width: 0%;
+  pointer-events: none;
+}
+
+.audio-slider-input {
+  position: absolute;
+  top: -7px;
+  left: 0;
+  width: 100%;
+  height: 20px;
+  opacity: 0;
+  cursor: pointer;
+  margin: 0;
+}
+
+.audio-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+.audio-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #4b5563;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.audio-btn:hover {
+  color: var(--accent);
+  transform: scale(1.1);
+}
+
+.audio-btn-play {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #000;
+  /* Black icon on yellow for contrast */
+  box-shadow: 0 4px 12px rgba(255, 198, 0, 0.3);
+}
+
+.audio-btn-play:hover {
+  background: var(--chord);
+  /* Orange on hover */
+  color: white;
+  /* White icon on orange */
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(255, 122, 0, 0.4);
+}
+
+/* Floating Close Button */
+.media-close-floating {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 20;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.media-close-floating:hover {
+  background: rgba(220, 38, 38, 0.9);
+  transform: scale(1.1);
+}
+
+/* Title Overlay (for audio or non-YouTube) */
+.media-title-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px 20px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+  color: white;
+  pointer-events: none;
+}
+
+.media-title {
+  font-size: 0.9rem;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.media-player-wrapper {
+  width: 100%;
+  height: 100%;
+  /* Fill the 16:9 container */
+  background: black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.media-player-wrapper iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.media-player-wrapper audio {
+  width: 100%;
+  padding: 20px;
+  background: #1a1a1a;
+}
+
+.media-player-wrapper video {
+  width: 100%;
+  max-height: 450px;
+  background: #000;
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 640px) {
+  .media-loader-dialog {
+    padding: 16px;
+  }
+
+  .media-loader-content {
+    border-radius: 20px;
+  }
+
+  .media-loader-header {
+    padding: 16px 20px;
+  }
+
+  .media-loader-body {
+    padding: 20px;
+  }
+
+  .media-player-container {
+    margin-top: 16px;
+    border-radius: 0;
+  }
+
+  .media-player-header {
+    padding: 12px 16px;
+  }
+
+  .media-title {
+    font-size: 0.9rem;
+  }
+
+  .media-player-wrapper iframe {
+    max-height: 280px;
+  }
+
+  .media-player-wrapper video {
+    max-height: 280px;
+  }
+}
+
+@media (max-width: 480px) {
+  .media-input-group button {
+    align-self: stretch;
+    text-align: center;
+  }
+}
+
+/* YouTube Fallback Styles (for file:// protocol) */
+.youtube-fallback-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #0f0f0f;
+  padding: 20px;
+}
+
+.youtube-link {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 800px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.youtube-link:hover {
+  transform: scale(1.02);
+}
+
+.youtube-link:hover .youtube-play-overlay {
+  opacity: 1;
+}
+
+.youtube-thumbnail {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+}
+
+.youtube-play-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.9;
+  transition: opacity 0.2s ease;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
+}
+
+.youtube-info-text {
+  margin: 16px 0 0;
+  color: #aaa;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* --- Custom File Drop Zone --- */
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  padding: 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  outline: none;
+}
+
+.drop-zone:hover,
+.drop-zone.drag-over {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  transform: translateY(-2px);
+}
+
+.drop-zone:focus-visible {
+  box-shadow: 0 0 0 3px rgba(255, 198, 0, 0.4);
+  border-color: var(--accent);
+}
+
+.drop-zone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+  /* Let clicks pass to parent */
+}
+
+.drop-zone-icon {
+  font-size: 32px;
+  margin-bottom: 4px;
+}
+
+.drop-zone-text {
+  font-weight: 500;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.file-name-display {
+  font-weight: 600;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.6);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  margin-top: 4px;
+}
+
+.file-name-display.hidden {
+  display: none;
+}
+
+.drop-zone-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text);
 }
