@@ -4,12 +4,36 @@ const plainOutput = document.getElementById("plainOutput");
 const pasteButton = document.getElementById("pasteButton");
 const clearButton = document.getElementById("clearButton");
 const copyButton = document.getElementById("copyButton");
+const saveAsButton = document.getElementById("saveAsButton");
+const saveAsDialog = document.getElementById("saveAsDialog");
+const closeSaveAsDialog = document.getElementById("closeSaveAsDialog");
+const saveFileNameInput = document.getElementById("saveFileNameInput");
+const confirmSaveAsButton = document.getElementById("confirmSaveAsButton");
+const cancelSaveAsButton = document.getElementById("cancelSaveAsButton");
 const copyStatus = document.getElementById("copyStatus");
+
+const SAVE_FORMATS = [".cho", ".chopro", ".chordpro", ".crd", ".pro", ".cpm", ".txt"];
+const DEFAULT_SAVE_FILENAME = "chord-chart";
 const transposeDown = document.getElementById("transposeDown");
 const transposeUp = document.getElementById("transposeUp");
 const transposeValue = document.getElementById("transposeValue");
 const flatsToggle = document.getElementById("flatsToggle");
 const groupChordsToggle = document.getElementById("groupChordsToggle");
+const metronomeButton = document.getElementById("metronomeButton");
+const metronomePopover = document.getElementById("metronomePopover");
+const metronomeBpmDown = document.getElementById("metronomeBpmDown");
+const metronomeBpmUp = document.getElementById("metronomeBpmUp");
+const metronomeBpmDisplay = document.getElementById("metronomeBpmDisplay");
+const metronomeBeatsDown = document.getElementById("metronomeBeatsDown");
+const metronomeBeatsUp = document.getElementById("metronomeBeatsUp");
+const metronomeBeatsValue = document.getElementById("metronomeBeatsValue");
+const metronomePlayPause = document.getElementById("metronomePlayPause");
+
+const METRONOME_SHOW_DELAY_MS = 250;
+const METRONOME_HIDE_DELAY_MS = 180;
+const METRONOME_LONG_PRESS_MS = 500;
+let metronomeShowTimer = null;
+let metronomeHideTimer = null;
 
 let baseOutputText = "";
 let outputText = "";
@@ -33,6 +57,7 @@ const sectionMatchers = [
   { regex: /^riff\b/i, canonical: "Riff" },
   { regex: /^adlib\b/i, canonical: "Adlib" },
   { regex: /^tag\b/i, canonical: "Tag" },
+  { regex: /^vamp\b/i, canonical: "Vamp" },
   { regex: /^refrain\b/i, canonical: "Refrain" },
   { regex: /^prelude\b/i, canonical: "Prelude" },
   { regex: /^ending\b/i, canonical: "Ending" },
@@ -587,8 +612,178 @@ function updateGroupChordsUI() {
 function updateTransposedOutput() {
   outputText = applyTranspose(baseOutputText, transposeSteps, useFlats);
   plainOutput.value = outputText;
-  copyButton.disabled = outputText.trim().length === 0;
+  const hasOutput = outputText.trim().length > 0;
+  copyButton.disabled = !hasOutput;
+  if (saveAsButton) saveAsButton.disabled = !hasOutput;
   outputDisplay.innerHTML = highlightChordPro(outputText || "");
+}
+
+function sanitizeFileName(name) {
+  return name
+    .trim()
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, "")
+    .replace(/\s+/g, " ")
+    .slice(0, 120);
+}
+
+function getSelectedSaveFormat() {
+  const selected = document.querySelector('input[name="saveFormat"]:checked');
+  const extension = selected?.value;
+  return SAVE_FORMATS.includes(extension) ? extension : ".cho";
+}
+
+function showSaveAsDialog() {
+  if (!saveAsDialog || !outputText.trim()) return;
+  saveFileNameInput.value = DEFAULT_SAVE_FILENAME;
+  saveAsDialog.classList.remove("hidden");
+  saveFileNameInput.focus();
+  saveFileNameInput.select();
+}
+
+function hideSaveAsDialog() {
+  if (!saveAsDialog) return;
+  saveAsDialog.classList.add("hidden");
+}
+
+function handleSaveAsDownload() {
+  if (!outputText.trim()) return;
+
+  const baseName = sanitizeFileName(saveFileNameInput.value) || DEFAULT_SAVE_FILENAME;
+  const extension = getSelectedSaveFormat();
+  const blob = new Blob([outputText], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${baseName}${extension}`;
+  link.click();
+  URL.revokeObjectURL(url);
+
+  hideSaveAsDialog();
+  copyStatus.textContent = `Saved as ${baseName}${extension}`;
+  setTimeout(() => {
+    copyStatus.textContent = "";
+  }, 2200);
+}
+
+function clearMetronomeTimers() {
+  clearTimeout(metronomeShowTimer);
+  clearTimeout(metronomeHideTimer);
+}
+
+function isMetronomeOpen() {
+  return metronomePopover && !metronomePopover.classList.contains("hidden");
+}
+
+function showMetronomePopover() {
+  if (!metronomePopover || !metronomeButton) return;
+  clearMetronomeTimers();
+  metronomePopover.classList.remove("hidden");
+  metronomeButton.setAttribute("aria-expanded", "true");
+}
+
+function hideMetronomePopover() {
+  if (!metronomePopover || !metronomeButton) return;
+  clearMetronomeTimers();
+  metronomePopover.classList.add("hidden");
+  metronomeButton.setAttribute("aria-expanded", "false");
+}
+
+function initMetronomePopover() {
+  if (!metronomeButton || !metronomePopover) return;
+
+  const prefersHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  let longPressTimer = null;
+  let longPressTriggered = false;
+
+  metronomeButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    if (longPressTriggered) {
+      longPressTriggered = false;
+      return;
+    }
+    window.Metronome?.togglePlayback();
+  });
+
+  if (!prefersHover) {
+    metronomeButton.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      longPressTriggered = false;
+      clearTimeout(longPressTimer);
+      longPressTimer = setTimeout(() => {
+        longPressTriggered = true;
+        showMetronomePopover();
+      }, METRONOME_LONG_PRESS_MS);
+    });
+
+    const cancelLongPress = () => clearTimeout(longPressTimer);
+    metronomeButton.addEventListener("pointerup", cancelLongPress);
+    metronomeButton.addEventListener("pointercancel", cancelLongPress);
+    metronomeButton.addEventListener("pointerleave", cancelLongPress);
+  }
+
+  if (prefersHover) {
+    metronomeButton.addEventListener("mouseenter", () => {
+      clearMetronomeTimers();
+      metronomeShowTimer = setTimeout(showMetronomePopover, METRONOME_SHOW_DELAY_MS);
+    });
+
+    metronomeButton.addEventListener("mouseleave", (event) => {
+      const toPopover = event.relatedTarget?.closest?.("#metronomePopover");
+      if (toPopover) return;
+      clearTimeout(metronomeShowTimer);
+      metronomeHideTimer = setTimeout(hideMetronomePopover, METRONOME_HIDE_DELAY_MS);
+    });
+
+    metronomePopover.addEventListener("mouseenter", () => {
+      clearTimeout(metronomeHideTimer);
+    });
+
+    metronomePopover.addEventListener("mouseleave", (event) => {
+      const toButton = event.relatedTarget?.closest?.("#metronomeButton");
+      if (toButton) return;
+      metronomeHideTimer = setTimeout(hideMetronomePopover, METRONOME_HIDE_DELAY_MS);
+    });
+  }
+
+  document.addEventListener("click", (event) => {
+    if (
+      isMetronomeOpen() &&
+      !event.target.closest(".metronome-anchor")
+    ) {
+      hideMetronomePopover();
+    }
+  });
+
+  metronomeBpmDown?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const current = Number.parseInt(metronomeBpmDisplay?.textContent || "120", 10);
+    window.Metronome?.setBpm(current - 1);
+  });
+
+  metronomeBpmUp?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const current = Number.parseInt(metronomeBpmDisplay?.textContent || "120", 10);
+    window.Metronome?.setBpm(current + 1);
+  });
+
+  metronomeBeatsDown?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const current = Number.parseInt(metronomeBeatsValue?.textContent || "4", 10);
+    window.Metronome?.setBeatsPerMeasure(current - 1);
+  });
+
+  metronomeBeatsUp?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const current = Number.parseInt(metronomeBeatsValue?.textContent || "4", 10);
+    window.Metronome?.setBeatsPerMeasure(current + 1);
+  });
+
+  metronomePlayPause?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    window.Metronome?.togglePlayback();
+  });
+
+  metronomePopover.addEventListener("click", (event) => event.stopPropagation());
 }
 
 function updateOutput() {
@@ -654,6 +849,45 @@ clearButton.addEventListener("click", () => {
 
 copyButton.addEventListener("click", handleCopy);
 
+if (saveAsButton) {
+  saveAsButton.addEventListener("click", showSaveAsDialog);
+}
+
+if (closeSaveAsDialog) {
+  closeSaveAsDialog.addEventListener("click", hideSaveAsDialog);
+}
+
+if (cancelSaveAsButton) {
+  cancelSaveAsButton.addEventListener("click", hideSaveAsDialog);
+}
+
+if (confirmSaveAsButton) {
+  confirmSaveAsButton.addEventListener("click", handleSaveAsDownload);
+}
+
+if (saveAsDialog) {
+  saveAsDialog.addEventListener("click", (event) => {
+    if (event.target === saveAsDialog) {
+      hideSaveAsDialog();
+    }
+  });
+}
+
+if (saveFileNameInput) {
+  saveFileNameInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handleSaveAsDownload();
+    }
+  });
+}
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && saveAsDialog && !saveAsDialog.classList.contains("hidden")) {
+    hideSaveAsDialog();
+  }
+});
+
 transposeDown.addEventListener("click", () => {
   if (transposeSteps > MIN_TRANSPOSE) {
     transposeSteps -= 1;
@@ -688,3 +922,4 @@ updateTransposeUI();
 updateFlatsUI();
 updateGroupChordsUI();
 updateOutput();
+initMetronomePopover();

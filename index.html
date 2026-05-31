@@ -7,6 +7,9 @@
   <title>Ultimate Guitar to ChordPro Converter</title>
   <link rel="icon" type="image/x-icon" href="favicon.svg">
   <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <!-- Primary SEO -->
   <meta name="description"
     content="Ultimate Guitar to ChordPro Converter turns UG chord sheets into clean ChordPro charts with instant transposition.">
@@ -63,11 +66,15 @@
 </script>
 
 <body>
-  <div class="site-logo">
-    <img src="images/logo.svg" alt="Ultimate Guitar to ChordPro Converter" width="175" height="40">
-  </div>
-
   <header class="hero">
+    <div class="hero-backdrop" aria-hidden="true">
+      <span class="hero-backdrop-gradient"></span>
+      <span class="hero-backdrop-mesh"></span>
+      <span class="hero-backdrop-dots"></span>
+    </div>
+    <div class="site-logo">
+      <img src="images/logo.svg" alt="Ultimate Guitar to ChordPro Converter" width="175" height="40">
+    </div>
     <div class="hero-content">
       <h1 class="hero-title">Ultimate Guitar to ChordPro Converter</h1>
       <p class="hero-subtitle">
@@ -139,8 +146,16 @@ Great is Thy faithfulness, Lord, unto me.</textarea></div>
             <div class="buttons">
               <button id="pasteButton" type="button">Paste</button>
               <button id="clearButton" type="button" class="secondary">Clear</button>
-              <button id="loadMediaButton" type="button" class="secondary" title="Load audio/video reference">🎵 Load
-                Media</button>
+              <button id="loadMediaButton" type="button" class="secondary btn-with-icon"
+                title="Load audio/video reference">
+                <svg class="btn-inline-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3.5" y="6.5" width="17" height="13" rx="2" stroke="currentColor" stroke-width="1.5" />
+                  <path d="M10.5 11.5v5l5-2.5-5-2.5z" fill="currentColor" />
+                  <path d="M7 4.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                </svg>
+                Load Media
+              </button>
             </div>
           </div>
 
@@ -151,8 +166,18 @@ Great is Thy faithfulness, Lord, unto me.</textarea></div>
               <textarea id="plainOutput" class="visually-hidden" aria-hidden="true"></textarea>
             </div>
 
+            <div id="chordTutorial" class="chord-tutorial hidden" role="status" aria-live="polite">
+              <div class="chord-tutorial-content">
+                <span class="chord-tutorial-icon" aria-hidden="true">🎸</span>
+                <p class="chord-tutorial-text">Click any chord to hear it — hover for fingerings</p>
+                <button id="chordTutorialDismiss" type="button" class="chord-tutorial-btn">Got it</button>
+              </div>
+              <div class="chord-tutorial-arrow" aria-hidden="true"></div>
+            </div>
+
             <div class="buttons">
               <button id="copyButton" type="button" disabled>Copy</button>
+              <button id="saveAsButton" type="button" class="secondary" disabled>Save as</button>
 
               <div id="transposeControls" class="transpose-controls" role="group" aria-label="Transpose">
                 <span class="transpose-label">Transpose</span>
@@ -162,8 +187,68 @@ Great is Thy faithfulness, Lord, unto me.</textarea></div>
               </div>
 
               <button id="flatsToggle" type="button" class="secondary" aria-pressed="false">Use flats</button>
-              <button id="groupChordsToggle" type="button" class="secondary" aria-pressed="false"
-                style="margin-left: 0.5rem;">Group chords</button>
+              <button id="groupChordsToggle" type="button" class="secondary" aria-pressed="false">Group chords</button>
+              <div class="metronome-anchor">
+                <button id="metronomeButton" type="button" class="secondary icon-btn metronome-trigger"
+                  aria-label="Start metronome" aria-expanded="false" aria-controls="metronomePopover"
+                  aria-pressed="false">
+                  <svg class="icon-btn-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path d="m14.153 8.188 -0.72 -3.236a2.493 2.493 0 0 0 -4.867 0L5.541 18.566A2 2 0 0 0 7.493 21h7.014a2 2 0 0 0 1.952 -2.434l-0.524 -2.357M11 18l9 -13"
+                      stroke-width="2" />
+                    <path d="M19 5a1 1 0 1 0 2 0 1 1 0 1 0 -2 0" stroke-width="2" />
+                  </svg>
+                </button>
+                <div id="metronomePopover" class="metronome-popover hidden" role="dialog"
+                  aria-label="Metronome controls">
+                  <div class="metronome-header">Metronome</div>
+                  <div class="metronome-bpm-row">
+                    <button type="button" id="metronomeBpmDown" class="metronome-step-btn"
+                      aria-label="Decrease BPM">−</button>
+                    <div class="metronome-dial-wrap">
+                      <div id="metronomeDial" class="metronome-dial" role="slider" aria-label="BPM"
+                        aria-valuemin="40" aria-valuemax="280" aria-valuenow="120" tabindex="0">
+                        <svg class="metronome-dial-svg" viewBox="0 0 120 120" aria-hidden="true">
+                          <circle class="metronome-dial-track" cx="60" cy="60" r="52" />
+                        </svg>
+                        <div id="metronomeDialArm" class="metronome-dial-arm">
+                          <div class="metronome-dial-knob"></div>
+                        </div>
+                        <div class="metronome-dial-readout">
+                          <span id="metronomeBpmDisplay" class="metronome-dial-bpm">120</span>
+                          <span class="metronome-dial-label">BPM</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button type="button" id="metronomeBpmUp" class="metronome-step-btn"
+                      aria-label="Increase BPM">+</button>
+                  </div>
+                  <button type="button" id="metronomeTapBtn" class="metronome-tap-btn"
+                    aria-label="Tap tempo">Tap</button>
+                  <div class="metronome-beats-row">
+                    <div class="metronome-beats-stepper">
+                      <button type="button" id="metronomeBeatsDown" class="metronome-step-btn"
+                        aria-label="Decrease beats per measure">−</button>
+                      <span id="metronomeBeatsValue" class="metronome-beats-value" aria-live="polite">4</span>
+                      <button type="button" id="metronomeBeatsUp" class="metronome-step-btn"
+                        aria-label="Increase beats per measure">+</button>
+                    </div>
+                    <span class="metronome-beats-label">Beats per measure</span>
+                  </div>
+                  <button type="button" id="metronomePlayPause" class="metronome-play-btn" aria-label="Start metronome">
+                    <svg id="metronomePlayIcon" class="metronome-play-icon" viewBox="0 0 24 24" fill="none"
+                      aria-hidden="true">
+                      <path d="M8 5.5v13l11-6.5-11-6.5z" fill="currentColor" />
+                    </svg>
+                    <svg id="metronomePauseIcon" class="metronome-play-icon hidden" viewBox="0 0 24 24" fill="none"
+                      aria-hidden="true">
+                      <path d="M8 6h3v12H8V6zm5 0h3v12h-3V6z" fill="currentColor" />
+                    </svg>
+                    <span id="metronomePlayLabel">Start</span>
+                  </button>
+                </div>
+              </div>
 
               <span id="copyStatus" class="status" aria-live="polite"></span>
             </div>
@@ -192,6 +277,60 @@ Great is Thy faithfulness, Lord, unto me.</textarea></div>
       </div>
     </section>
 
+    <!-- Save As Dialog -->
+    <div id="saveAsDialog" class="media-loader-dialog hidden" role="dialog" aria-modal="true"
+      aria-labelledby="saveAsDialogTitle">
+      <div class="media-loader-content">
+        <div class="media-loader-header">
+          <h3 id="saveAsDialogTitle">Save as ChordPro file</h3>
+          <button id="closeSaveAsDialog" type="button" class="media-close-btn" aria-label="Close">✕</button>
+        </div>
+        <div class="media-loader-body">
+          <div class="media-input-group">
+            <label for="saveFileNameInput">File name</label>
+            <input type="text" id="saveFileNameInput" placeholder="chord-chart" autocomplete="off">
+          </div>
+          <fieldset class="save-format-fieldset">
+            <legend>File format</legend>
+            <div class="save-format-options">
+              <label class="save-format-option">
+                <input type="radio" name="saveFormat" value=".cho" checked>
+                <span>.cho</span>
+              </label>
+              <label class="save-format-option">
+                <input type="radio" name="saveFormat" value=".chopro">
+                <span>.chopro</span>
+              </label>
+              <label class="save-format-option">
+                <input type="radio" name="saveFormat" value=".chordpro">
+                <span>.chordpro</span>
+              </label>
+              <label class="save-format-option">
+                <input type="radio" name="saveFormat" value=".crd">
+                <span>.crd</span>
+              </label>
+              <label class="save-format-option">
+                <input type="radio" name="saveFormat" value=".pro">
+                <span>.pro</span>
+              </label>
+              <label class="save-format-option">
+                <input type="radio" name="saveFormat" value=".cpm">
+                <span>.cpm</span>
+              </label>
+              <label class="save-format-option">
+                <input type="radio" name="saveFormat" value=".txt">
+                <span>.txt</span>
+              </label>
+            </div>
+          </fieldset>
+          <div class="save-as-actions">
+            <button id="confirmSaveAsButton" type="button">Download</button>
+            <button id="cancelSaveAsButton" type="button" class="secondary">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Media Loader Dialog -->
     <div id="mediaLoaderDialog" class="media-loader-dialog hidden">
       <div class="media-loader-content">
@@ -213,7 +352,15 @@ Great is Thy faithfulness, Lord, unto me.</textarea></div>
             <div id="dropZone" class="drop-zone" tabindex="0" role="button" aria-label="Upload file">
               <input type="file" id="mediaFileInput" accept="audio/*,video/*" class="visually-hidden">
               <div class="drop-zone-content">
-                <span class="drop-zone-icon">📁</span>
+                <svg class="drop-zone-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 15.5V5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                  <path d="M8.5 9L12 5.5L15.5 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                  <path
+                    d="M5.5 13.5V16.5C5.5 18.433 7.067 20 9 20H15C16.933 20 18.5 18.433 18.5 16.5V13.5"
+                    stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
                 <span class="drop-zone-text">Click to browse or drag file here</span>
                 <span id="fileNameDisplay" class="file-name-display hidden"></span>
               </div>
@@ -289,10 +436,10 @@ Great is Thy faithfulness, Lord, unto me.</textarea></div>
           <span class="feature-icon">
             <img src="images/dart.svg" alt="Click to play chords">
           </span>
-          <h3 class="feature-title">Click-to-Play Chords</h3>
+          <h3 class="feature-title">Chord shapes &amp; playback</h3>
           <p class="feature-text">
-            Click any chord in the output to hear how it sounds on guitar. Perfect for learning new songs or
-            verifying your transpositions.
+            Click any chord to hear it instantly. Hover to browse fingerings, step through voicings, and press Play to hear
+            a specific shape.
           </p>
         </div>
       </div>
@@ -316,6 +463,30 @@ Great is Thy faithfulness, Lord, unto me.</textarea></div>
 
   </main>
 
+  <div id="chordShapePopover" class="chord-shape-popover hidden" role="dialog" aria-label="Chord shapes">
+    <div class="chord-shape-header">
+      <span id="chordShapeTitle" class="chord-shape-title">D</span>
+    </div>
+    <div id="chordShapeDiagram" class="chord-shape-diagram" aria-hidden="true"></div>
+    <div class="chord-shape-nav">
+      <button type="button" id="chordShapePrev" class="chord-shape-nav-btn" aria-label="Previous shape">‹</button>
+      <span id="chordShapeCounter" class="chord-shape-counter">1 of 5</span>
+      <button type="button" id="chordShapeNext" class="chord-shape-nav-btn" aria-label="Next shape">›</button>
+    </div>
+    <div class="chord-instrument-switch" role="radiogroup" aria-label="Instrument sound">
+      <label class="chord-instrument-option">
+        <input type="radio" name="chordInstrument" value="guitar" checked>
+        <span>Acoustic</span>
+      </label>
+      <label class="chord-instrument-option">
+        <input type="radio" name="chordInstrument" value="piano">
+        <span>Piano</span>
+      </label>
+    </div>
+    <button type="button" id="chordShapePlay" class="chord-shape-play">Play</button>
+    <p id="chordShapeHint" class="chord-shape-hint hidden">No fingerings found — playing standard voicing</p>
+  </div>
+
   <footer>
     ©
     <script>document.write(new Date().getFullYear());</script> Ultimate Guitar to ChordPro Converter.
@@ -325,6 +496,8 @@ Great is Thy faithfulness, Lord, unto me.</textarea></div>
   <script src="https://cdn.jsdelivr.net/npm/tonal/browser/tonal.min.js" defer></script>
   <script src="./js/script.js" defer></script>
   <script src="./js/audioplayer.js" defer></script>
+  <script src="./js/chordshapes.js" defer></script>
+  <script src="./js/metronome.js" defer></script>
   <script src="./js/mediaplayer.js" defer></script>
 </body>
 
